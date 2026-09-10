@@ -2,7 +2,7 @@
 <html lang="fr">
 <head>
 <meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
 <title>EDO Campus — Dashboard Réseaux Sociaux</title>
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -44,6 +44,8 @@
     background:linear-gradient(180deg,#FFA200,#FFC300); border-radius:2px;
   }
   .nav-label { position:relative; }
+  .bottom-nav-btn[data-active="true"] { color:#FFA200; }
+  .bottom-nav-btn[data-active="false"] { color:rgba(255,255,255,0.5); }
 
   .toggle-btn[data-active="true"] { background:#000; color:#fff; }
   .toggle-btn[data-active="false"] { background:#fff; color:#6B6B6B; }
@@ -71,17 +73,85 @@
   .cal-cell[data-has-post="true"]:hover { background:#FAFAF9; cursor:pointer; }
   .cal-cell[data-selected="true"] { outline: 2px solid #FFA200; outline-offset:-2px; }
 
+  @media (max-width: 640px) {
+    .cal-cell { min-height: 52px; }
+    .cal-dot { width: 5px; height: 5px; }
+  }
+
+  /* Fade helper retriggered on each render */
+  .fade-target { opacity: 1; transition: opacity 0.45s ease, transform 0.45s ease; }
+  .fade-target.fade-out { opacity: 0; transform: translateY(6px); }
+
+  @keyframes scaleIn {
+    from { opacity: 0; transform: scale(0.96); }
+    to { opacity: 1; transform: scale(1); }
+  }
+  .anim-scale-in { animation: scaleIn 0.35s ease; }
+
+  @keyframes fadeSlideUp {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .anim-fade-up { animation: fadeSlideUp 0.4s ease; }
+
+  .card-hover { transition: box-shadow 0.25s ease, transform 0.25s ease; }
+  .card-hover:hover { box-shadow: 0 8px 24px rgba(0,0,0,0.06); transform: translateY(-1px); }
+
+  .btn-press { transition: transform 0.15s ease, box-shadow 0.2s ease, opacity 0.2s ease; }
+  .btn-press:hover { transform: scale(1.015); }
+  .btn-press:active { transform: scale(0.98); }
+
+  #login-screen { transition: opacity 0.4s ease; }
+  #app-shell { transition: opacity 0.4s ease; }
+
   @media (prefers-reduced-motion: reduce) {
-    * { transition:none !important; animation:none !important; }
+    * { transition: none !important; animation: none !important; }
   }
 </style>
 </head>
 <body class="text-edo-ink">
 
-<div class="flex min-h-screen">
+<!-- ============ AUTH CHECK SPLASH ============ -->
+<div id="auth-splash" class="fixed inset-0 z-[60] bg-black flex items-center justify-center">
+  <p class="font-heading font-extrabold text-white text-xl tracking-tight">EDO Campus</p>
+</div>
 
-  <!-- SIDEBAR -->
-  <aside class="w-64 shrink-0 bg-black text-white flex flex-col justify-between">
+<!-- ============ LOGIN SCREEN ============ -->
+<div id="login-screen" class="hidden fixed inset-0 z-50 bg-black flex items-center justify-center px-6 opacity-0">
+  <div class="w-full max-w-sm anim-scale-in">
+    <div class="text-center mb-8">
+      <p class="font-heading font-extrabold text-2xl text-white tracking-tight">EDO Campus</p>
+      <p class="text-sm text-white/50 mt-1">Pilotage réseaux sociaux</p>
+    </div>
+
+    <form id="login-form" class="bg-white rounded-2xl p-6 space-y-4 shadow-2xl" onsubmit="handleLogin(event)">
+      <div>
+        <label class="block text-xs font-semibold text-black/60 mb-1.5">Email</label>
+        <input required type="email" id="login-email" autocomplete="username" placeholder="prenom.nom@edocampus.fr" class="w-full border border-edo-line rounded-lg px-3 py-2.5 text-sm bg-white transition-colors" />
+      </div>
+      <div>
+        <label class="block text-xs font-semibold text-black/60 mb-1.5">Mot de passe</label>
+        <input required type="password" id="login-password" autocomplete="current-password" placeholder="••••••••" class="w-full border border-edo-line rounded-lg px-3 py-2.5 text-sm bg-white transition-colors" />
+      </div>
+
+      <p id="login-error" class="hidden text-xs font-medium text-red-500 bg-red-50 border border-red-100 rounded-lg px-3 py-2"></p>
+
+      <button type="submit" id="login-submit" class="btn-press w-full py-3 rounded-xl font-heading font-bold text-sm text-black kpi-accent disabled:opacity-50">
+        Se connecter
+      </button>
+    </form>
+
+    <div id="login-config-banner" class="hidden mt-4 text-xs text-white/60 bg-white/5 rounded-lg px-3 py-2.5 text-center">
+      ⚠️ Config Firebase non renseignée — complète l'objet <code class="font-mono">firebaseConfig</code> en bas du fichier.
+    </div>
+  </div>
+</div>
+
+<!-- ============ APP SHELL (masqué tant que non connecté) ============ -->
+<div id="app-shell" class="hidden min-h-screen opacity-0">
+
+  <!-- SIDEBAR (desktop / tablette) -->
+  <aside class="hidden md:flex w-64 shrink-0 bg-black text-white flex-col justify-between fixed inset-y-0 left-0">
     <div>
       <div class="px-6 pt-8 pb-6">
         <p class="font-heading font-extrabold text-xl tracking-tight leading-none">EDO Campus</p>
@@ -90,25 +160,25 @@
 
       <nav class="mt-2 flex flex-col gap-1 px-3">
         <button class="nav-btn" data-tab="saisie" data-active="true" onclick="switchTab('saisie')">
-          <span class="nav-label flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-white/70">
+          <span class="nav-label flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-white/70 transition-all duration-300">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
             Saisie &amp; historique
           </span>
         </button>
         <button class="nav-btn" data-tab="dashboard" data-active="false" onclick="switchTab('dashboard')">
-          <span class="nav-label flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-white/70">
+          <span class="nav-label flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-white/70 transition-all duration-300">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18M7 15l4-4 3 3 5-6"/></svg>
             Dashboard
           </span>
         </button>
         <button class="nav-btn" data-tab="calendrier" data-active="false" onclick="switchTab('calendrier')">
-          <span class="nav-label flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-white/70">
+          <span class="nav-label flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-white/70 transition-all duration-300">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 3v3M16 3v3"/></svg>
             Calendrier
           </span>
         </button>
         <button class="nav-btn" data-tab="swipe" data-active="false" onclick="switchTab('swipe')">
-          <span class="nav-label flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-white/70">
+          <span class="nav-label flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-white/70 transition-all duration-300">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20l-8-8a5 5 0 117-7l1 1 1-1a5 5 0 117 7l-8 8z"/></svg>
             Swipe file
           </span>
@@ -116,59 +186,63 @@
       </nav>
     </div>
 
-    <div class="px-4 pb-6">
+    <div class="px-4 pb-6 space-y-2">
       <div id="connection-status" class="px-3 py-2.5 rounded-lg text-xs font-medium bg-white/5 text-white/60 flex items-center gap-2">
         <span id="connection-dot" class="w-2 h-2 rounded-full bg-white/30"></span>
         <span id="connection-text">Connexion à Firebase…</span>
       </div>
+      <button onclick="handleLogout()" class="btn-press w-full flex items-center gap-2 px-3 py-2.5 rounded-lg text-xs font-medium text-white/50 hover:text-white hover:bg-white/5">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9"/></svg>
+        Se déconnecter
+      </button>
     </div>
   </aside>
 
   <!-- MAIN -->
-  <main class="flex-1 min-w-0">
+  <main class="md:ml-64 min-h-screen pb-20 md:pb-0">
 
-    <!-- CONFIG WARNING BANNER (shown only if Firebase config is not filled in) -->
-    <div id="config-banner" class="hidden bg-edo-orange/15 border-b border-edo-orange/30 px-8 py-3 text-sm text-black/80">
-      ⚠️ Config Firebase non renseignée — remplace l'objet <code class="font-mono text-xs bg-black/5 px-1 rounded">firebaseConfig</code> en haut du fichier avant de déployer. L'application ne peut pas lire/écrire de données tant que ce n'est pas fait.
+    <!-- CONFIG WARNING BANNER -->
+    <div id="config-banner" class="hidden bg-edo-orange/15 border-b border-edo-orange/30 px-4 md:px-8 py-3 text-sm text-black/80">
+      ⚠️ Config Firebase non renseignée — remplace l'objet <code class="font-mono text-xs bg-black/5 px-1 rounded">firebaseConfig</code> en bas du fichier avant de déployer.
     </div>
 
-    <!-- APP HEADER (visible sur tous les onglets) -->
-    <div class="flex items-center justify-between px-8 py-4 border-b border-edo-line bg-white">
+    <!-- APP HEADER -->
+    <div class="flex items-center justify-between gap-3 px-4 md:px-8 py-4 border-b border-edo-line bg-white flex-wrap">
       <div>
         <p class="font-heading font-bold text-sm">EDO Campus</p>
-        <p class="text-[11px] text-black/40">Suivi de performance réseaux sociaux</p>
+        <p class="text-[11px] text-black/40 hidden sm:block">Suivi de performance réseaux sociaux</p>
       </div>
 
-      <div class="flex items-center gap-6">
+      <div class="flex items-center gap-3 sm:gap-6 flex-wrap">
         <!-- Compteurs abonnés -->
-        <div class="flex items-center gap-4">
+        <div class="flex items-center gap-3 sm:gap-4">
           <div class="flex items-center gap-2">
-            <span class="w-2 h-2 rounded-full bg-black"></span>
+            <span class="w-2 h-2 rounded-full bg-black shrink-0"></span>
             <div class="leading-none">
               <p id="followers-linkedin" class="font-heading font-bold text-sm">—</p>
-              <p class="text-[10px] text-black/40">Abonnés LinkedIn</p>
+              <p class="text-[10px] text-black/40 hidden sm:block">Abonnés LinkedIn</p>
             </div>
           </div>
           <div class="flex items-center gap-2">
-            <span class="w-2 h-2 rounded-full bg-edo-orange"></span>
+            <span class="w-2 h-2 rounded-full bg-edo-orange shrink-0"></span>
             <div class="leading-none">
               <p id="followers-instagram" class="font-heading font-bold text-sm">—</p>
-              <p class="text-[10px] text-black/40">Abonnés Instagram</p>
+              <p class="text-[10px] text-black/40 hidden sm:block">Abonnés Instagram</p>
             </div>
           </div>
-          <button onclick="toggleFollowersPanel()" title="Modifier les compteurs" class="w-7 h-7 flex items-center justify-center rounded-md border border-edo-line hover:bg-edo-paper">
+          <button onclick="toggleFollowersPanel()" title="Modifier les compteurs" class="btn-press w-7 h-7 flex items-center justify-center rounded-md border border-edo-line hover:bg-edo-paper">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 3a2.85 2.85 0 114 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>
           </button>
         </div>
 
-        <div class="w-px h-8 bg-edo-line"></div>
+        <div class="w-px h-8 bg-edo-line hidden sm:block"></div>
 
         <!-- Liens réseaux -->
         <div class="flex items-center gap-2">
-          <a href="https://www.linkedin.com/company/88877449/admin/page-posts/published/" target="_blank" rel="noopener" title="Voir la page LinkedIn" class="w-8 h-8 flex items-center justify-center rounded-lg bg-black text-white hover:opacity-80">
+          <a href="https://www.linkedin.com/company/88877449/admin/page-posts/published/" target="_blank" rel="noopener" title="Voir la page LinkedIn" class="btn-press w-8 h-8 flex items-center justify-center rounded-lg bg-black text-white hover:opacity-80">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M20.45 20.45h-3.55v-5.57c0-1.33-.02-3.03-1.85-3.03-1.85 0-2.14 1.45-2.14 2.94v5.66H9.36V9h3.41v1.56h.05c.47-.9 1.63-1.85 3.37-1.85 3.6 0 4.27 2.37 4.27 5.45v6.29zM5.34 7.43a2.06 2.06 0 110-4.12 2.06 2.06 0 010 4.12zM7.11 20.45H3.56V9h3.55v11.45z"/></svg>
           </a>
-          <a href="https://www.instagram.com/edo_campus" target="_blank" rel="noopener" title="Voir le profil Instagram" class="w-8 h-8 flex items-center justify-center rounded-lg text-white hover:opacity-80" style="background:linear-gradient(135deg,#FFA200,#FFC300)">
+          <a href="https://www.instagram.com/edo_campus" target="_blank" rel="noopener" title="Voir le profil Instagram" class="btn-press w-8 h-8 flex items-center justify-center rounded-lg text-white hover:opacity-80" style="background:linear-gradient(135deg,#FFA200,#FFC300)">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#000" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.2" cy="6.8" r="1"/></svg>
           </a>
         </div>
@@ -176,34 +250,34 @@
     </div>
 
     <!-- Followers edit panel -->
-    <div id="followers-panel" class="hidden px-8 py-3 bg-edo-paper border-b border-edo-line flex items-center gap-3">
+    <div id="followers-panel" class="hidden px-4 md:px-8 py-3 bg-edo-paper border-b border-edo-line flex items-center gap-3 flex-wrap">
       <label class="text-xs font-semibold text-black/60">Abonnés LinkedIn</label>
-      <input type="number" min="0" id="f-followers-linkedin" class="w-28 border border-edo-line rounded-lg px-3 py-1.5 text-sm" />
+      <input type="number" min="0" id="f-followers-linkedin" class="w-24 border border-edo-line rounded-lg px-3 py-1.5 text-sm" />
       <label class="text-xs font-semibold text-black/60">Abonnés Instagram</label>
-      <input type="number" min="0" id="f-followers-instagram" class="w-28 border border-edo-line rounded-lg px-3 py-1.5 text-sm" />
-      <button onclick="saveFollowers()" class="px-4 py-1.5 rounded-lg text-sm font-semibold text-black kpi-accent">Enregistrer</button>
+      <input type="number" min="0" id="f-followers-instagram" class="w-24 border border-edo-line rounded-lg px-3 py-1.5 text-sm" />
+      <button onclick="saveFollowers()" class="btn-press px-4 py-1.5 rounded-lg text-sm font-semibold text-black kpi-accent">Enregistrer</button>
     </div>
 
     <!-- VIEW: SAISIE + HISTORIQUE -->
     <section id="view-saisie" class="view" data-visible="true">
-      <div class="max-w-3xl mx-auto px-8 py-10">
+      <div class="max-w-3xl mx-auto px-4 md:px-8 py-8 md:py-10">
         <p id="form-title" class="font-heading font-bold text-2xl">Ajouter une publication</p>
         <p class="text-sm text-black/50 mt-1">Renseignez les performances d'un post en quelques secondes.</p>
 
-        <form id="post-form" class="mt-8 bg-white border border-edo-line rounded-2xl p-6 space-y-6" onsubmit="handleSubmit(event)">
+        <form id="post-form" class="mt-6 md:mt-8 bg-white border border-edo-line rounded-2xl p-5 md:p-6 space-y-6 shadow-sm" onsubmit="handleSubmit(event)">
 
-          <div class="grid grid-cols-2 gap-5">
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
             <div>
               <label class="block text-xs font-semibold text-black/60 mb-1.5">Date du post</label>
-              <input required type="date" id="f-date" class="w-full border border-edo-line rounded-lg px-3 py-2.5 text-sm bg-white" />
+              <input required type="date" id="f-date" class="w-full border border-edo-line rounded-lg px-3 py-2.5 text-sm bg-white transition-colors" />
             </div>
             <div>
               <label class="block text-xs font-semibold text-black/60 mb-1.5">Plateforme</label>
               <div class="grid grid-cols-2 gap-2">
-                <button type="button" id="btn-instagram" class="toggle-btn" data-active="true" onclick="setPlatform('instagram')">
+                <button type="button" id="btn-instagram" class="toggle-btn btn-press" data-active="true" onclick="setPlatform('instagram')">
                   <span class="flex items-center justify-center gap-2 border border-edo-line rounded-lg px-3 py-2.5 text-sm font-semibold">Instagram</span>
                 </button>
-                <button type="button" id="btn-linkedin" class="toggle-btn" data-active="false" onclick="setPlatform('linkedin')">
+                <button type="button" id="btn-linkedin" class="toggle-btn btn-press" data-active="false" onclick="setPlatform('linkedin')">
                   <span class="flex items-center justify-center gap-2 border border-edo-line rounded-lg px-3 py-2.5 text-sm font-semibold">LinkedIn</span>
                 </button>
               </div>
@@ -212,16 +286,16 @@
 
           <div>
             <label class="block text-xs font-semibold text-black/60 mb-1.5">Titre du post</label>
-            <input required type="text" id="f-title" placeholder="Ex : Journée portes ouvertes" class="w-full border border-edo-line rounded-lg px-3 py-2.5 text-sm bg-white" />
+            <input required type="text" id="f-title" placeholder="Ex : Journée portes ouvertes" class="w-full border border-edo-line rounded-lg px-3 py-2.5 text-sm bg-white transition-colors" />
           </div>
 
-          <div id="metrics-grid" class="grid grid-cols-3 gap-5"></div>
+          <div id="metrics-grid" class="grid grid-cols-1 sm:grid-cols-3 gap-5"></div>
 
           <div class="flex items-center gap-3">
-            <button type="submit" id="submit-btn" class="flex-1 py-3.5 rounded-xl font-heading font-bold text-sm text-black kpi-accent hover:opacity-90 transition-opacity">
+            <button type="submit" id="submit-btn" class="btn-press flex-1 py-3.5 rounded-xl font-heading font-bold text-sm text-black kpi-accent">
               Ajouter les performances
             </button>
-            <button type="button" id="cancel-edit-btn" onclick="cancelEdit()" class="hidden px-5 py-3.5 rounded-xl font-heading font-semibold text-sm border border-edo-line text-black/60 hover:bg-edo-paper">
+            <button type="button" id="cancel-edit-btn" onclick="cancelEdit()" class="hidden btn-press px-5 py-3.5 rounded-xl font-heading font-semibold text-sm border border-edo-line text-black/60 hover:bg-edo-paper">
               Annuler
             </button>
           </div>
@@ -229,14 +303,14 @@
 
         <div class="mt-8">
           <p class="font-heading font-semibold text-sm text-black/70 mb-3">Historique des publications</p>
-          <div class="bg-white border border-edo-line rounded-2xl overflow-hidden">
-            <table class="data-table w-full text-sm">
+          <div class="bg-white border border-edo-line rounded-2xl overflow-x-auto shadow-sm">
+            <table class="data-table w-full text-sm min-w-[560px]">
               <thead>
                 <tr class="text-left text-[11px] text-black/40 border-b border-edo-line">
                   <th>Date</th><th>Plateforme</th><th>Titre</th><th>Vues</th><th>Engagement</th><th></th>
                 </tr>
               </thead>
-              <tbody id="history-list"></tbody>
+              <tbody id="history-list" class="fade-target"></tbody>
             </table>
             <p id="history-empty" class="text-sm text-black/40 px-4 py-6 hidden">Aucune publication enregistrée pour le moment.</p>
           </div>
@@ -246,7 +320,7 @@
 
     <!-- VIEW: DASHBOARD -->
     <section id="view-dashboard" class="view" data-visible="false">
-      <div class="max-w-6xl mx-auto px-8 py-10">
+      <div class="max-w-6xl mx-auto px-4 md:px-8 py-8 md:py-10">
 
         <div class="flex items-center justify-between flex-wrap gap-4">
           <div>
@@ -254,65 +328,65 @@
             <p class="text-sm text-black/50 mt-1">Vue d'ensemble des performances.</p>
           </div>
 
-          <div class="flex items-center gap-2">
-            <div class="flex bg-white border border-edo-line rounded-lg p-1 gap-1">
-              <button class="range-btn" data-active="true" data-range="7d" onclick="setRange('7d')">
-                <span class="px-3.5 py-1.5 rounded-md text-sm font-medium block">7 derniers jours</span>
+          <div class="flex items-center gap-2 overflow-x-auto">
+            <div class="flex bg-white border border-edo-line rounded-lg p-1 gap-1 shrink-0">
+              <button class="range-btn btn-press" data-active="true" data-range="7d" onclick="setRange('7d')">
+                <span class="px-3.5 py-1.5 rounded-md text-sm font-medium block whitespace-nowrap">7 jours</span>
               </button>
-              <button class="range-btn" data-active="false" data-range="30d" onclick="setRange('30d')">
-                <span class="px-3.5 py-1.5 rounded-md text-sm font-medium block">30 derniers jours</span>
+              <button class="range-btn btn-press" data-active="false" data-range="30d" onclick="setRange('30d')">
+                <span class="px-3.5 py-1.5 rounded-md text-sm font-medium block whitespace-nowrap">30 jours</span>
               </button>
-              <button class="range-btn" data-active="false" data-range="custom" onclick="setRange('custom')">
-                <span class="px-3.5 py-1.5 rounded-md text-sm font-medium block">Personnalisé</span>
+              <button class="range-btn btn-press" data-active="false" data-range="custom" onclick="setRange('custom')">
+                <span class="px-3.5 py-1.5 rounded-md text-sm font-medium block whitespace-nowrap">Personnalisé</span>
               </button>
             </div>
           </div>
         </div>
 
-        <div id="custom-range-bar" class="hidden mt-4 flex items-center gap-3 bg-white border border-edo-line rounded-lg p-3">
+        <div id="custom-range-bar" class="hidden mt-4 flex items-center gap-3 bg-white border border-edo-line rounded-lg p-3 flex-wrap">
           <label class="text-xs font-semibold text-black/60">Du</label>
           <input type="date" id="custom-start" class="border border-edo-line rounded-lg px-3 py-1.5 text-sm" />
           <label class="text-xs font-semibold text-black/60">Au</label>
           <input type="date" id="custom-end" class="border border-edo-line rounded-lg px-3 py-1.5 text-sm" />
-          <button onclick="applyCustomRange()" class="ml-2 px-4 py-1.5 rounded-lg text-sm font-semibold text-black kpi-accent">Appliquer</button>
+          <button onclick="applyCustomRange()" class="btn-press ml-0 sm:ml-2 px-4 py-1.5 rounded-lg text-sm font-semibold text-black kpi-accent">Appliquer</button>
         </div>
 
-        <!-- Sub-views: Globale / LinkedIn / Instagram -->
-        <div class="flex bg-white border border-edo-line rounded-lg p-1 gap-1 mt-5 w-fit">
-          <button class="subview-btn" data-active="true" data-subview="global" onclick="setSubview('global')">
-            <span class="px-4 py-1.5 rounded-md text-sm font-semibold block">Vue globale</span>
+        <!-- Sub-views -->
+        <div class="flex bg-white border border-edo-line rounded-lg p-1 gap-1 mt-5 w-fit overflow-x-auto">
+          <button class="subview-btn btn-press" data-active="true" data-subview="global" onclick="setSubview('global')">
+            <span class="px-4 py-1.5 rounded-md text-sm font-semibold block whitespace-nowrap">Vue globale</span>
           </button>
-          <button class="subview-btn" data-active="false" data-subview="linkedin" onclick="setSubview('linkedin')">
-            <span class="px-4 py-1.5 rounded-md text-sm font-semibold block">LinkedIn</span>
+          <button class="subview-btn btn-press" data-active="false" data-subview="linkedin" onclick="setSubview('linkedin')">
+            <span class="px-4 py-1.5 rounded-md text-sm font-semibold block whitespace-nowrap">LinkedIn</span>
           </button>
-          <button class="subview-btn" data-active="false" data-subview="instagram" onclick="setSubview('instagram')">
-            <span class="px-4 py-1.5 rounded-md text-sm font-semibold block">Instagram</span>
+          <button class="subview-btn btn-press" data-active="false" data-subview="instagram" onclick="setSubview('instagram')">
+            <span class="px-4 py-1.5 rounded-md text-sm font-semibold block whitespace-nowrap">Instagram</span>
           </button>
         </div>
 
         <!-- KPIs -->
-        <div class="grid grid-cols-5 gap-4 mt-6">
-          <div class="bg-white border border-edo-line rounded-2xl p-4">
+        <div id="kpi-grid" class="fade-target grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mt-6">
+          <div class="card-hover bg-white border border-edo-line rounded-2xl p-4 shadow-sm">
             <p class="text-xs font-semibold text-black/50">Total des vues</p>
             <p id="kpi-views" class="font-heading font-extrabold text-2xl mt-2">—</p>
             <p id="kpi-views-evo" class="text-xs font-semibold mt-2"></p>
           </div>
-          <div class="bg-white border border-edo-line rounded-2xl p-4">
+          <div class="card-hover bg-white border border-edo-line rounded-2xl p-4 shadow-sm">
             <p class="text-xs font-semibold text-black/50">Total des likes</p>
             <p id="kpi-likes" class="font-heading font-extrabold text-2xl mt-2">—</p>
             <p id="kpi-likes-evo" class="text-xs font-semibold mt-2"></p>
           </div>
-          <div class="bg-white border border-edo-line rounded-2xl p-4">
+          <div class="card-hover bg-white border border-edo-line rounded-2xl p-4 shadow-sm">
             <p class="text-xs font-semibold text-black/50">Total des commentaires</p>
             <p id="kpi-comments" class="font-heading font-extrabold text-2xl mt-2">—</p>
             <p id="kpi-comments-evo" class="text-xs font-semibold mt-2"></p>
           </div>
-          <div class="bg-white border border-edo-line rounded-2xl p-4">
+          <div class="card-hover bg-white border border-edo-line rounded-2xl p-4 shadow-sm">
             <p class="text-xs font-semibold text-black/50">Visibilité globale</p>
             <p id="kpi-visibility" class="font-heading font-extrabold text-2xl mt-2">—</p>
             <p class="text-[10px] text-black/35 mt-2">Vues cumulées LinkedIn + Instagram</p>
           </div>
-          <div class="bg-white border border-edo-line rounded-2xl p-4">
+          <div class="card-hover bg-white border border-edo-line rounded-2xl p-4 shadow-sm">
             <p class="text-xs font-semibold text-black/50">Engagement moyen</p>
             <p id="kpi-engagement" class="font-heading font-extrabold text-2xl mt-2">—</p>
             <p id="kpi-engagement-evo" class="text-xs font-semibold mt-2"></p>
@@ -320,24 +394,24 @@
         </div>
 
         <!-- Chart -->
-        <div class="mt-6 bg-white border border-edo-line rounded-2xl p-5">
+        <div id="chart-wrapper" class="fade-target mt-6 bg-white border border-edo-line rounded-2xl p-4 md:p-5 shadow-sm">
           <p class="font-heading font-semibold text-sm">Évolution des vues</p>
           <p class="text-xs text-black/40 mb-3">Sur la période et la vue sélectionnées</p>
-          <div class="h-72"><canvas id="chart-line"></canvas></div>
+          <div class="h-64 md:h-72"><canvas id="chart-line"></canvas></div>
         </div>
 
         <!-- Palmarès -->
         <p class="font-heading font-semibold text-lg mt-8">Palmarès</p>
-        <div class="grid grid-cols-3 gap-5 mt-3">
-          <div class="bg-white border border-edo-line rounded-2xl p-5">
+        <div id="ranking-grid" class="fade-target grid grid-cols-1 md:grid-cols-3 gap-5 mt-3">
+          <div class="card-hover bg-white border border-edo-line rounded-2xl p-5 shadow-sm">
             <p class="font-heading font-semibold text-sm">Top 3 — Taux d'engagement</p>
             <ol id="ranking-engagement" class="mt-3 space-y-2"></ol>
           </div>
-          <div class="bg-white border border-edo-line rounded-2xl p-5">
+          <div class="card-hover bg-white border border-edo-line rounded-2xl p-5 shadow-sm">
             <p class="font-heading font-semibold text-sm">Top 3 — Vues / impressions</p>
             <ol id="ranking-views" class="mt-3 space-y-2"></ol>
           </div>
-          <div class="bg-white border border-edo-line rounded-2xl p-5">
+          <div class="card-hover bg-white border border-edo-line rounded-2xl p-5 shadow-sm">
             <p class="font-heading font-semibold text-sm">Top 3 — Interactions</p>
             <p class="text-[11px] text-black/35 -mt-1">Likes + commentaires</p>
             <ol id="ranking-interactions" class="mt-3 space-y-2"></ol>
@@ -345,8 +419,8 @@
         </div>
 
         <!-- Table -->
-        <div class="mt-6 bg-white border border-edo-line rounded-2xl overflow-hidden">
-          <table class="data-table w-full text-sm">
+        <div id="dashboard-table-wrapper" class="fade-target mt-6 bg-white border border-edo-line rounded-2xl overflow-x-auto shadow-sm">
+          <table class="data-table w-full text-sm min-w-[560px]">
             <thead>
               <tr class="text-left text-[11px] text-black/40 border-b border-edo-line">
                 <th>Date</th><th>Plateforme</th><th>Titre</th><th>Vues</th><th>Interactions</th><th>Engagement</th>
@@ -362,16 +436,16 @@
 
     <!-- VIEW: CALENDRIER -->
     <section id="view-calendrier" class="view" data-visible="false">
-      <div class="max-w-4xl mx-auto px-8 py-10">
+      <div class="max-w-4xl mx-auto px-4 md:px-8 py-8 md:py-10">
         <p class="font-heading font-bold text-2xl">Calendrier de suivi</p>
         <p class="text-sm text-black/50 mt-1">Fréquence de publication LinkedIn &amp; Instagram.</p>
 
         <div class="flex items-center justify-between mt-6">
-          <button onclick="shiftMonth(-1)" class="w-8 h-8 rounded-lg border border-edo-line flex items-center justify-center hover:bg-white">
+          <button onclick="shiftMonth(-1)" class="btn-press w-8 h-8 rounded-lg border border-edo-line flex items-center justify-center hover:bg-white">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
           </button>
           <p id="cal-month-label" class="font-heading font-bold text-base"></p>
-          <button onclick="shiftMonth(1)" class="w-8 h-8 rounded-lg border border-edo-line flex items-center justify-center hover:bg-white">
+          <button onclick="shiftMonth(1)" class="btn-press w-8 h-8 rounded-lg border border-edo-line flex items-center justify-center hover:bg-white">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
           </button>
         </div>
@@ -381,18 +455,18 @@
           <span class="flex items-center gap-1.5"><span class="cal-dot bg-black"></span> LinkedIn</span>
         </div>
 
-        <div class="grid grid-cols-7 gap-px mt-3 bg-edo-line border border-edo-line rounded-2xl overflow-hidden">
-          <div class="bg-edo-paper text-center text-[11px] font-semibold text-black/40 py-2">Lun</div>
-          <div class="bg-edo-paper text-center text-[11px] font-semibold text-black/40 py-2">Mar</div>
-          <div class="bg-edo-paper text-center text-[11px] font-semibold text-black/40 py-2">Mer</div>
-          <div class="bg-edo-paper text-center text-[11px] font-semibold text-black/40 py-2">Jeu</div>
-          <div class="bg-edo-paper text-center text-[11px] font-semibold text-black/40 py-2">Ven</div>
-          <div class="bg-edo-paper text-center text-[11px] font-semibold text-black/40 py-2">Sam</div>
-          <div class="bg-edo-paper text-center text-[11px] font-semibold text-black/40 py-2">Dim</div>
+        <div id="cal-wrapper" class="fade-target grid grid-cols-7 gap-px mt-3 bg-edo-line border border-edo-line rounded-2xl overflow-hidden">
+          <div class="bg-edo-paper text-center text-[10px] sm:text-[11px] font-semibold text-black/40 py-2">Lun</div>
+          <div class="bg-edo-paper text-center text-[10px] sm:text-[11px] font-semibold text-black/40 py-2">Mar</div>
+          <div class="bg-edo-paper text-center text-[10px] sm:text-[11px] font-semibold text-black/40 py-2">Mer</div>
+          <div class="bg-edo-paper text-center text-[10px] sm:text-[11px] font-semibold text-black/40 py-2">Jeu</div>
+          <div class="bg-edo-paper text-center text-[10px] sm:text-[11px] font-semibold text-black/40 py-2">Ven</div>
+          <div class="bg-edo-paper text-center text-[10px] sm:text-[11px] font-semibold text-black/40 py-2">Sam</div>
+          <div class="bg-edo-paper text-center text-[10px] sm:text-[11px] font-semibold text-black/40 py-2">Dim</div>
           <div id="cal-grid" class="contents"></div>
         </div>
 
-        <div id="cal-day-panel" class="hidden mt-5 bg-white border border-edo-line rounded-2xl p-5">
+        <div id="cal-day-panel" class="hidden anim-fade-up mt-5 bg-white border border-edo-line rounded-2xl p-5 shadow-sm">
           <p id="cal-day-title" class="font-heading font-semibold text-sm"></p>
           <div id="cal-day-posts" class="mt-3 space-y-2"></div>
         </div>
@@ -401,72 +475,96 @@
 
     <!-- VIEW: SWIPE FILE -->
     <section id="view-swipe" class="view" data-visible="false">
-      <div class="max-w-4xl mx-auto px-8 py-10">
+      <div class="max-w-4xl mx-auto px-4 md:px-8 py-8 md:py-10">
         <p class="font-heading font-bold text-2xl">Swipe file</p>
         <p class="text-sm text-black/50 mt-1">Veille créative partagée par l'équipe.</p>
 
-        <form id="swipe-form" class="mt-6 bg-white border border-edo-line rounded-2xl p-6 space-y-4" onsubmit="handleSwipeSubmit(event)">
+        <form id="swipe-form" class="mt-6 bg-white border border-edo-line rounded-2xl p-5 md:p-6 space-y-4 shadow-sm" onsubmit="handleSwipeSubmit(event)">
           <div>
             <label class="block text-xs font-semibold text-black/60 mb-1.5">URL du post inspirant</label>
-            <input required type="url" id="f-swipe-url" placeholder="https://www.instagram.com/p/…" class="w-full border border-edo-line rounded-lg px-3 py-2.5 text-sm bg-white" />
+            <input required type="url" id="f-swipe-url" placeholder="https://www.instagram.com/p/…" class="w-full border border-edo-line rounded-lg px-3 py-2.5 text-sm bg-white transition-colors" />
           </div>
           <div>
             <label class="block text-xs font-semibold text-black/60 mb-1.5">Note / idée associée</label>
-            <textarea required id="f-swipe-note" rows="3" placeholder="Ce qui marche dans ce post, comment l'adapter pour EDO Campus…" class="w-full border border-edo-line rounded-lg px-3 py-2.5 text-sm bg-white resize-none"></textarea>
+            <textarea required id="f-swipe-note" rows="3" placeholder="Ce qui marche dans ce post, comment l'adapter pour EDO Campus…" class="w-full border border-edo-line rounded-lg px-3 py-2.5 text-sm bg-white resize-none transition-colors"></textarea>
           </div>
-          <button type="submit" class="w-full py-3 rounded-xl font-heading font-bold text-sm text-black kpi-accent hover:opacity-90 transition-opacity">
+          <button type="submit" class="btn-press w-full py-3 rounded-xl font-heading font-bold text-sm text-black kpi-accent">
             Ajouter à la veille
           </button>
         </form>
 
-        <div id="swipe-grid" class="grid grid-cols-2 gap-4 mt-8"></div>
+        <div id="swipe-grid" class="fade-target grid grid-cols-1 sm:grid-cols-2 gap-4 mt-8"></div>
         <p id="swipe-empty" class="hidden text-sm text-black/40 mt-8">Aucune idée enregistrée pour le moment — soyez le·la premier·ère à en ajouter une.</p>
       </div>
     </section>
 
   </main>
+
+  <!-- BOTTOM NAV (mobile) -->
+  <nav class="md:hidden fixed bottom-0 inset-x-0 bg-black z-40 flex items-stretch justify-around px-2 pb-[env(safe-area-inset-bottom)]">
+    <button class="bottom-nav-btn btn-press flex-1 flex flex-col items-center gap-1 py-2.5" data-tab="saisie" data-active="true" onclick="switchTab('saisie')">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+      <span class="text-[10px] font-medium">Saisie</span>
+    </button>
+    <button class="bottom-nav-btn btn-press flex-1 flex flex-col items-center gap-1 py-2.5" data-tab="dashboard" data-active="false" onclick="switchTab('dashboard')">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18M7 15l4-4 3 3 5-6"/></svg>
+      <span class="text-[10px] font-medium">Dashboard</span>
+    </button>
+    <button class="bottom-nav-btn btn-press flex-1 flex flex-col items-center gap-1 py-2.5" data-tab="calendrier" data-active="false" onclick="switchTab('calendrier')">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 3v3M16 3v3"/></svg>
+      <span class="text-[10px] font-medium">Calendrier</span>
+    </button>
+    <button class="bottom-nav-btn btn-press flex-1 flex flex-col items-center gap-1 py-2.5" data-tab="swipe" data-active="false" onclick="switchTab('swipe')">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20l-8-8a5 5 0 117-7l1 1 1-1a5 5 0 117 7l-8 8z"/></svg>
+      <span class="text-[10px] font-medium">Swipe</span>
+    </button>
+    <button class="bottom-nav-btn btn-press flex-1 flex flex-col items-center gap-1 py-2.5 text-white/50" data-active="false" onclick="handleLogout()">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9"/></svg>
+      <span class="text-[10px] font-medium">Sortir</span>
+    </button>
+  </nav>
+
 </div>
 
 <script type="module">
 /* ==========================================================================
    FIREBASE — À CONFIGURER AVANT DÉPLOIEMENT
    --------------------------------------------------------------------------
-   1. Crée un projet sur https://console.firebase.google.com
-   2. Active Firestore Database (mode production ou test selon ton besoin)
-   3. Récupère ta config web (Paramètres du projet > Général > Vos applications > SDK)
-      et remplace l'objet firebaseConfig ci-dessous.
-   4. Règles Firestore minimales pour que l'équipe puisse lire/écrire
-      (à adapter avec une vraie authentification si besoin de restreindre l'accès) :
+   1. Projet Firebase > Firestore activé > Authentication activé (fournisseur
+      "Email/Password") > crée les comptes de ton équipe côté console
+      (Authentication > Users > Add user) — pas d'inscription depuis l'app.
+   2. Colle ta config web dans l'objet firebaseConfig tout en bas de ce bloc.
+   3. Règles Firestore recommandées (accès réservé aux comptes authentifiés) :
 
       rules_version = '2';
       service cloud.firestore {
         match /databases/{database}/documents {
           match /social_posts/{postId} {
-            allow read, write: if true;
+            allow read, write: if request.auth != null;
           }
           match /swipe_file/{ideaId} {
-            allow read, write: if true;
+            allow read, write: if request.auth != null;
           }
           match /app_settings/{settingId} {
-            allow read, write: if true;
+            allow read, write: if request.auth != null;
           }
         }
       }
 
-      ⚠️ "allow read, write: if true" ouvre l'accès à tout le monde disposant de
-      l'URL de l'app. Pour une vraie mise en production, ajoute Firebase
-      Authentication et restreins ces règles (ex: if request.auth != null).
-
-   5. Collections utilisées par l'app : "social_posts", "swipe_file", "app_settings"
-      (créées automatiquement au premier enregistrement, rien à faire manuellement).
+   4. Collections utilisées : "social_posts", "swipe_file", "app_settings"
+      (créées automatiquement au premier enregistrement).
    ========================================================================== */
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import {
   getFirestore, collection, addDoc, updateDoc, deleteDoc, doc,
-  onSnapshot, query, orderBy, setDoc, getDoc, serverTimestamp
+  onSnapshot, query, orderBy, setDoc, serverTimestamp
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import {
+  getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
+/* ⚠️ Complète cet objet avec tes clés Firebase (Console > Paramètres du projet > SDK) */
 const firebaseConfig = {
   apiKey: "AIzaSyAnc2-tFoPV0WjziXyHjJJIlF-OUKEYCh0",
   authDomain: "dashboardedo.firebaseapp.com",
@@ -476,14 +574,22 @@ const firebaseConfig = {
   appId: "1:328324561956:web:5c47027f0e481bdf5e2cb1"
 };
 
-const isConfigured = firebaseConfig.apiKey !== "REMPLACE_MOI";
+const isConfigured = !!firebaseConfig.apiKey;
 let db = null;
+let auth = null;
+let unsubscribers = [];
 
 if (isConfigured) {
-  const app = initializeApp(firebaseConfig);
-  db = getFirestore(app);
+  try {
+    const app = initializeApp(firebaseConfig);
+    db = getFirestore(app);
+    auth = getAuth(app);
+  } catch (e) {
+    console.error('Erreur d\'initialisation Firebase :', e);
+  }
 } else {
   document.getElementById('config-banner').classList.remove('hidden');
+  document.getElementById('login-config-banner').classList.remove('hidden');
   document.getElementById('connection-text').textContent = 'Firebase non configuré';
 }
 
@@ -491,23 +597,14 @@ const postsCol = () => collection(db, 'social_posts');
 const swipeCol = () => collection(db, 'swipe_file');
 const settingsDoc = () => doc(db, 'app_settings', 'counters');
 
-/* ============ CONFIG ============ */
+/* ============ CONFIG PLATEFORMES ============ */
 const PLATFORM_CONFIG = {
-  instagram: {
-    label: 'Instagram',
-    viewsLabel: 'Vues',
-    metricALabel: 'Enregistrements',
-    metricBLabel: 'Partages',
-    color: '#FFA200'
-  },
-  linkedin: {
-    label: 'LinkedIn',
-    viewsLabel: 'Impressions',
-    metricALabel: 'Reposts',
-    metricBLabel: 'Clics',
-    color: '#000000'
-  }
+  instagram: { label: 'Instagram', viewsLabel: 'Vues', metricALabel: 'Enregistrements', metricBLabel: 'Partages', color: '#FFA200' },
+  linkedin:  { label: 'LinkedIn',  viewsLabel: 'Impressions', metricALabel: 'Reposts', metricBLabel: 'Clics', color: '#000000' }
 };
+function platformConfig(platform) {
+  return PLATFORM_CONFIG[platform] || PLATFORM_CONFIG.instagram;
+}
 
 /* ============ STATE ============ */
 let state = {
@@ -524,41 +621,154 @@ let state = {
 
 let lineChart = null;
 
-/* ============ FIRESTORE LISTENERS ============ */
-function initListeners() {
-  if (!isConfigured) return;
+/* ============ AUTHENTIFICATION ============ */
+window.handleLogin = async function (evt) {
+  evt.preventDefault();
+  const errorEl = document.getElementById('login-error');
+  const submitBtn = document.getElementById('login-submit');
+  errorEl.classList.add('hidden');
 
-  const postsQuery = query(postsCol(), orderBy('date', 'desc'));
-  onSnapshot(postsQuery, (snap) => {
-    state.posts = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-    setConnectionStatus(true);
-    renderHistory();
-    if (state.activeTab === 'dashboard') renderDashboard();
-    if (state.activeTab === 'calendrier') renderCalendar();
-  }, (err) => {
-    console.error(err);
-    setConnectionStatus(false);
-  });
+  if (!isConfigured || !auth) {
+    errorEl.textContent = "Firebase n'est pas configuré — contacte un administrateur.";
+    errorEl.classList.remove('hidden');
+    return;
+  }
 
-  const swipeQuery = query(swipeCol(), orderBy('createdAt', 'desc'));
-  onSnapshot(swipeQuery, (snap) => {
-    state.swipes = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-    renderSwipeGrid();
-  }, (err) => console.error(err));
+  const email = document.getElementById('login-email').value.trim();
+  const password = document.getElementById('login-password').value;
 
-  onSnapshot(settingsDoc(), (snap) => {
-    if (snap.exists()) {
-      const data = snap.data();
-      state.followers.linkedin = data.linkedin || 0;
-      state.followers.instagram = data.instagram || 0;
-      renderFollowers();
+  submitBtn.disabled = true;
+  submitBtn.textContent = 'Connexion…';
+
+  try {
+    await signInWithEmailAndPassword(auth, email, password);
+    // onAuthStateChanged prend le relais pour afficher l'app
+  } catch (err) {
+    errorEl.textContent = mapAuthError(err);
+    errorEl.classList.remove('hidden');
+  } finally {
+    submitBtn.disabled = false;
+    submitBtn.textContent = 'Se connecter';
+  }
+};
+
+function mapAuthError(err) {
+  const code = err && err.code ? err.code : '';
+  if (['auth/invalid-credential', 'auth/wrong-password', 'auth/user-not-found', 'auth/invalid-email'].includes(code)) {
+    return 'Identifiants incorrects. Vérifie ton email et ton mot de passe.';
+  }
+  if (code === 'auth/too-many-requests') {
+    return 'Trop de tentatives — réessaie dans quelques minutes.';
+  }
+  if (code === 'auth/network-request-failed') {
+    return 'Problème de connexion réseau. Réessaie.';
+  }
+  return "Une erreur est survenue. Réessaie.";
+}
+
+window.handleLogout = async function () {
+  if (!auth) return;
+  try {
+    await signOut(auth);
+  } catch (e) {
+    console.error('Erreur lors de la déconnexion :', e);
+  }
+};
+
+function showLogin() {
+  document.getElementById('auth-splash').classList.add('hidden');
+  const login = document.getElementById('login-screen');
+  const shell = document.getElementById('app-shell');
+
+  shell.classList.add('opacity-0');
+  setTimeout(() => { shell.classList.add('hidden'); shell.classList.remove('flex'); }, 350);
+
+  login.classList.remove('hidden');
+  requestAnimationFrame(() => login.classList.remove('opacity-0'));
+
+  document.getElementById('login-form').reset();
+  document.getElementById('login-error').classList.add('hidden');
+}
+
+function showApp() {
+  document.getElementById('auth-splash').classList.add('hidden');
+  const login = document.getElementById('login-screen');
+  const shell = document.getElementById('app-shell');
+
+  login.classList.add('opacity-0');
+  setTimeout(() => login.classList.add('hidden'), 350);
+
+  shell.classList.remove('hidden');
+  shell.classList.add('md:flex');
+  requestAnimationFrame(() => shell.classList.remove('opacity-0'));
+}
+
+if (isConfigured && auth) {
+  onAuthStateChanged(auth, (user) => {
+    if (user) {
+      showApp();
+      initListeners();
+    } else {
+      cleanupListeners();
+      showLogin();
     }
-  }, (err) => console.error(err));
+  });
+} else {
+  // Pas de Firebase configuré : on affiche quand même l'écran de connexion
+  // (désactivé) pour que le message d'avertissement soit visible.
+  showLogin();
+}
+
+/* ============ FIRESTORE LISTENERS ============ */
+function cleanupListeners() {
+  unsubscribers.forEach(unsub => { try { unsub(); } catch (e) {} });
+  unsubscribers = [];
+}
+
+function initListeners() {
+  if (!isConfigured || !db) return;
+  cleanupListeners(); // évite les doublons si appelé plusieurs fois
+
+  try {
+    const postsQuery = query(postsCol(), orderBy('date', 'desc'));
+    const unsubPosts = onSnapshot(postsQuery, (snap) => {
+      state.posts = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      setConnectionStatus(true);
+      renderHistory();
+      if (state.activeTab === 'dashboard') renderDashboard();
+      if (state.activeTab === 'calendrier') renderCalendar();
+    }, (err) => {
+      console.error('Erreur social_posts :', err);
+      setConnectionStatus(false);
+    });
+    unsubscribers.push(unsubPosts);
+
+    const swipeQuery = query(swipeCol(), orderBy('createdAt', 'desc'));
+    const unsubSwipe = onSnapshot(swipeQuery, (snap) => {
+      state.swipes = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      renderSwipeGrid();
+    }, (err) => console.error('Erreur swipe_file :', err));
+    unsubscribers.push(unsubSwipe);
+
+    const unsubSettings = onSnapshot(settingsDoc(), (snap) => {
+      if (snap.exists()) {
+        const data = snap.data() || {};
+        state.followers.linkedin = data.linkedin || 0;
+        state.followers.instagram = data.instagram || 0;
+        renderFollowers();
+      }
+    }, (err) => console.error('Erreur app_settings :', err));
+    unsubscribers.push(unsubSettings);
+  } catch (e) {
+    console.error('Erreur d\'initialisation des écouteurs :', e);
+    setConnectionStatus(false);
+  }
 }
 
 function setConnectionStatus(ok) {
   const dot = document.getElementById('connection-dot');
   const text = document.getElementById('connection-text');
+  if (!dot || !text) return;
   if (ok) {
     dot.className = 'w-2 h-2 rounded-full bg-emerald-400';
     text.textContent = 'Connecté à Firebase';
@@ -568,15 +778,29 @@ function setConnectionStatus(ok) {
   }
 }
 
+/* ============ ANIMATION HELPER ============ */
+function replay(elId) {
+  const el = document.getElementById(elId);
+  if (!el) return;
+  el.classList.add('fade-out');
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => el.classList.remove('fade-out'));
+  });
+}
+
 /* ============ TABS ============ */
 window.switchTab = function (tab) {
   state.activeTab = tab;
   ['saisie', 'dashboard', 'calendrier', 'swipe'].forEach(t => {
-    document.getElementById('view-' + t).dataset.visible = (t === tab);
+    const section = document.getElementById('view-' + t);
+    if (section) section.dataset.visible = (t === tab);
   });
-  document.querySelectorAll('.nav-btn').forEach(btn => {
-    btn.dataset.active = (btn.dataset.tab === tab);
+  document.querySelectorAll('.nav-btn, .bottom-nav-btn').forEach(btn => {
+    if (btn.dataset.tab) btn.dataset.active = (btn.dataset.tab === tab);
   });
+  const activeSection = document.getElementById('view-' + tab);
+  if (activeSection) activeSection.classList.add('anim-fade-up');
+
   if (tab === 'dashboard') renderDashboard();
   if (tab === 'calendrier') renderCalendar();
 };
@@ -592,17 +816,24 @@ window.toggleFollowersPanel = function () {
 window.saveFollowers = async function () {
   const linkedin = Number(document.getElementById('f-followers-linkedin').value) || 0;
   const instagram = Number(document.getElementById('f-followers-instagram').value) || 0;
-  if (!isConfigured) {
-    alert("Configure Firebase avant d'enregistrer les compteurs (voir commentaire en haut du script).");
+  if (!isConfigured || !db) {
+    alert("Configure Firebase avant d'enregistrer les compteurs.");
     return;
   }
-  await setDoc(settingsDoc(), { linkedin, instagram }, { merge: true });
-  document.getElementById('followers-panel').classList.add('hidden');
+  try {
+    await setDoc(settingsDoc(), { linkedin, instagram }, { merge: true });
+    document.getElementById('followers-panel').classList.add('hidden');
+  } catch (e) {
+    console.error(e);
+    alert("Impossible d'enregistrer les compteurs pour le moment.");
+  }
 };
 
 function renderFollowers() {
-  document.getElementById('followers-linkedin').textContent = new Intl.NumberFormat('fr-FR').format(state.followers.linkedin);
-  document.getElementById('followers-instagram').textContent = new Intl.NumberFormat('fr-FR').format(state.followers.instagram);
+  const l = document.getElementById('followers-linkedin');
+  const i = document.getElementById('followers-instagram');
+  if (l) l.textContent = new Intl.NumberFormat('fr-FR').format(state.followers.linkedin || 0);
+  if (i) i.textContent = new Intl.NumberFormat('fr-FR').format(state.followers.instagram || 0);
 }
 
 /* ============ FORM (Saisie) ============ */
@@ -614,44 +845,44 @@ window.setPlatform = function (platform) {
 };
 
 function renderMetricsGrid(values) {
-  const cfg = PLATFORM_CONFIG[state.formPlatform];
+  const cfg = platformConfig(state.formPlatform);
   const v = values || {};
   const grid = document.getElementById('metrics-grid');
   grid.innerHTML = `
     <div>
       <label class="block text-xs font-semibold text-black/60 mb-1.5">${cfg.viewsLabel}</label>
-      <input required type="number" min="0" id="f-views" value="${v.views ?? ''}" class="w-full border border-edo-line rounded-lg px-3 py-2.5 text-sm bg-white" />
+      <input required type="number" min="0" id="f-views" value="${v.views ?? ''}" class="w-full border border-edo-line rounded-lg px-3 py-2.5 text-sm bg-white transition-colors" />
     </div>
     <div>
       <label class="block text-xs font-semibold text-black/60 mb-1.5">Likes</label>
-      <input required type="number" min="0" id="f-likes" value="${v.likes ?? ''}" class="w-full border border-edo-line rounded-lg px-3 py-2.5 text-sm bg-white" />
+      <input required type="number" min="0" id="f-likes" value="${v.likes ?? ''}" class="w-full border border-edo-line rounded-lg px-3 py-2.5 text-sm bg-white transition-colors" />
     </div>
     <div>
       <label class="block text-xs font-semibold text-black/60 mb-1.5">Commentaires</label>
-      <input required type="number" min="0" id="f-comments" value="${v.comments ?? ''}" class="w-full border border-edo-line rounded-lg px-3 py-2.5 text-sm bg-white" />
+      <input required type="number" min="0" id="f-comments" value="${v.comments ?? ''}" class="w-full border border-edo-line rounded-lg px-3 py-2.5 text-sm bg-white transition-colors" />
     </div>
     <div>
       <label class="block text-xs font-semibold text-black/60 mb-1.5">${cfg.metricALabel}</label>
-      <input required type="number" min="0" id="f-metricA" value="${v.metricA ?? ''}" class="w-full border border-edo-line rounded-lg px-3 py-2.5 text-sm bg-white" />
+      <input required type="number" min="0" id="f-metricA" value="${v.metricA ?? ''}" class="w-full border border-edo-line rounded-lg px-3 py-2.5 text-sm bg-white transition-colors" />
     </div>
     <div>
       <label class="block text-xs font-semibold text-black/60 mb-1.5">${cfg.metricBLabel}</label>
-      <input required type="number" min="0" id="f-metricB" value="${v.metricB ?? ''}" class="w-full border border-edo-line rounded-lg px-3 py-2.5 text-sm bg-white" />
+      <input required type="number" min="0" id="f-metricB" value="${v.metricB ?? ''}" class="w-full border border-edo-line rounded-lg px-3 py-2.5 text-sm bg-white transition-colors" />
     </div>
   `;
 }
 
 window.handleSubmit = async function (evt) {
   evt.preventDefault();
-  if (!isConfigured) {
-    alert("Configure Firebase avant d'ajouter des données (voir commentaire en haut du script).");
+  if (!isConfigured || !db) {
+    alert("Configure Firebase avant d'ajouter des données.");
     return;
   }
 
   const payload = {
     date: document.getElementById('f-date').value,
     platform: state.formPlatform,
-    title: document.getElementById('f-title').value.trim(),
+    title: (document.getElementById('f-title').value || '').trim(),
     views: Number(document.getElementById('f-views').value) || 0,
     likes: Number(document.getElementById('f-likes').value) || 0,
     comments: Number(document.getElementById('f-comments').value) || 0,
@@ -659,14 +890,24 @@ window.handleSubmit = async function (evt) {
     metricB: Number(document.getElementById('f-metricB').value) || 0
   };
 
-  if (state.editingId) {
-    await updateDoc(doc(db, 'social_posts', state.editingId), payload);
-    cancelEdit();
-  } else {
-    await addDoc(postsCol(), { ...payload, createdAt: serverTimestamp() });
-    evt.target.reset();
-    document.getElementById('f-date').value = '';
-    setPlatform(state.formPlatform);
+  const submitBtn = document.getElementById('submit-btn');
+  submitBtn.disabled = true;
+
+  try {
+    if (state.editingId) {
+      await updateDoc(doc(db, 'social_posts', state.editingId), payload);
+      cancelEdit();
+    } else {
+      await addDoc(postsCol(), { ...payload, createdAt: serverTimestamp() });
+      evt.target.reset();
+      document.getElementById('f-date').value = '';
+      setPlatform(state.formPlatform);
+    }
+  } catch (e) {
+    console.error(e);
+    alert("Impossible d'enregistrer cette publication pour le moment. Réessaie.");
+  } finally {
+    submitBtn.disabled = false;
   }
 };
 
@@ -679,9 +920,9 @@ window.editPost = function (id) {
   document.getElementById('submit-btn').textContent = 'Enregistrer les modifications';
   document.getElementById('cancel-edit-btn').classList.remove('hidden');
 
-  document.getElementById('f-date').value = post.date;
-  document.getElementById('f-title').value = post.title;
-  setPlatform(post.platform);
+  document.getElementById('f-date').value = post.date || '';
+  document.getElementById('f-title').value = post.title || '';
+  setPlatform(post.platform || 'instagram');
   renderMetricsGrid(post);
 
   window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -699,44 +940,40 @@ window.cancelEdit = function () {
 
 window.deletePost = async function (id) {
   if (!confirm('Supprimer définitivement cette publication ?')) return;
-  await deleteDoc(doc(db, 'social_posts', id));
+  try {
+    await deleteDoc(doc(db, 'social_posts', id));
+  } catch (e) {
+    console.error(e);
+    alert("Impossible de supprimer cette publication pour le moment.");
+  }
 };
 
 /* ============ METRICS HELPERS ============ */
 // Formule officielle : ((Likes + Commentaires + Partages/Reposts + Enregistrements) / Vues) * 100
-function interactions(post) {
-  return post.likes + post.comments + post.metricA + post.metricB;
-}
-function likesComments(post) {
-  return post.likes + post.comments;
-}
-function engagementRate(post) {
-  return post.views > 0 ? (interactions(post) / post.views) * 100 : 0;
-}
-function shareMetric(post) {
-  return post.platform === 'instagram' ? post.metricB : post.metricA;
-}
+function num(v) { return typeof v === 'number' && !isNaN(v) ? v : 0; }
+function interactions(post) { return num(post.likes) + num(post.comments) + num(post.metricA) + num(post.metricB); }
+function likesComments(post) { return num(post.likes) + num(post.comments); }
+function engagementRate(post) { return num(post.views) > 0 ? (interactions(post) / num(post.views)) * 100 : 0; }
 
-function formatNumber(n) {
-  return new Intl.NumberFormat('fr-FR').format(Math.round(n));
-}
-function formatPercent(n) {
-  return (n >= 0 ? '+' : '') + n.toFixed(1) + ' %';
-}
+function formatNumber(n) { return new Intl.NumberFormat('fr-FR').format(Math.round(num(n))); }
+function formatPercent(n) { return (n >= 0 ? '+' : '') + n.toFixed(1) + ' %'; }
 function escapeHtml(str) {
   const div = document.createElement('div');
-  div.textContent = str;
+  div.textContent = str ?? '';
   return div.innerHTML;
 }
 function platformBadge(platform) {
-  return `<span class="inline-flex items-center gap-1.5 text-xs font-semibold px-2 py-1 rounded-full ${platform === 'instagram' ? 'bg-edo-orange/15 text-edo-orange' : 'bg-black/5 text-black'}">${PLATFORM_CONFIG[platform].label}</span>`;
+  const cfg = platformConfig(platform);
+  const isInsta = platform === 'instagram';
+  return `<span class="inline-flex items-center gap-1.5 text-xs font-semibold px-2 py-1 rounded-full ${isInsta ? 'bg-edo-orange/15 text-edo-orange' : 'bg-black/5 text-black'}">${cfg.label}</span>`;
 }
 
 /* ============ HISTORIQUE (Saisie view) ============ */
 function renderHistory() {
   const tbody = document.getElementById('history-list');
   const empty = document.getElementById('history-empty');
-  const sorted = [...state.posts].sort((a, b) => b.date.localeCompare(a.date));
+  if (!tbody) return;
+  const sorted = [...state.posts].sort((a, b) => (b.date || '').localeCompare(a.date || ''));
 
   if (sorted.length === 0) {
     tbody.innerHTML = '';
@@ -747,9 +984,9 @@ function renderHistory() {
 
   tbody.innerHTML = sorted.map(p => `
     <tr class="border-b border-edo-line last:border-0">
-      <td class="text-black/70">${p.date}</td>
+      <td class="text-black/70 whitespace-nowrap">${escapeHtml(p.date || '—')}</td>
       <td>${platformBadge(p.platform)}</td>
-      <td class="text-black/80">${escapeHtml(p.title)}</td>
+      <td class="text-black/80">${escapeHtml(p.title || 'Sans titre')}</td>
       <td class="text-black/70">${formatNumber(p.views)}</td>
       <td class="text-black/70">${engagementRate(p).toFixed(1)} %</td>
       <td class="whitespace-nowrap">
@@ -758,6 +995,8 @@ function renderHistory() {
       </td>
     </tr>
   `).join('');
+
+  replay('history-list');
 }
 
 /* ============ DATE RANGE ============ */
@@ -807,7 +1046,8 @@ window.setSubview = function (subview) {
 };
 
 function postsInDateRange(range) {
-  return state.posts.filter(p => p.date >= range.start && p.date <= range.end);
+  if (!range.start || !range.end) return [];
+  return state.posts.filter(p => p.date && p.date >= range.start && p.date <= range.end);
 }
 function filterByPlatform(posts, subview) {
   if (subview === 'global') return posts;
@@ -818,9 +1058,9 @@ function filterByPlatform(posts, subview) {
 // Le taux d'engagement global est une MOYENNE PONDÉRÉE (interactions totales / vues totales),
 // jamais l'addition des pourcentages de chaque post.
 function computeKPIs(posts) {
-  const totalViews = posts.reduce((s, p) => s + p.views, 0);
-  const totalLikes = posts.reduce((s, p) => s + p.likes, 0);
-  const totalComments = posts.reduce((s, p) => s + p.comments, 0);
+  const totalViews = posts.reduce((s, p) => s + num(p.views), 0);
+  const totalLikes = posts.reduce((s, p) => s + num(p.likes), 0);
+  const totalComments = posts.reduce((s, p) => s + num(p.comments), 0);
   const totalInteractions = posts.reduce((s, p) => s + interactions(p), 0);
   const avgEngagement = totalViews > 0 ? (totalInteractions / totalViews) * 100 : 0;
   return { totalViews, totalLikes, totalComments, avgEngagement };
@@ -829,17 +1069,18 @@ function computeKPIs(posts) {
 function evolutionLabel(current, previous) {
   if (previous === 0) {
     return current === 0
-      ? { text: 'Stable vs période précédente', cls: 'text-black/40' }
-      : { text: 'Nouveau vs période précédente', cls: 'text-edo-orange' };
+      ? { text: 'Stable vs période préc.', cls: 'text-black/40' }
+      : { text: 'Nouveau vs période préc.', cls: 'text-edo-orange' };
   }
   const pct = ((current - previous) / previous) * 100;
   const cls = pct >= 0 ? 'text-emerald-600' : 'text-red-500';
-  return { text: formatPercent(pct) + ' vs période préc.', cls };
+  return { text: formatPercent(pct) + ' vs préc.', cls };
 }
 
 function setEvo(elId, current, previous) {
   const evo = evolutionLabel(current, previous);
   const el = document.getElementById(elId);
+  if (!el) return;
   el.textContent = evo.text;
   el.className = 'text-xs font-semibold mt-2 ' + evo.cls;
 }
@@ -864,60 +1105,68 @@ function renderKPIs(range, prevRange) {
   setEvo('kpi-comments-evo', cur.totalComments, prev.totalComments);
   setEvo('kpi-engagement-evo', cur.avgEngagement, prev.avgEngagement);
 
-  // Visibilité globale = vues cumulées LinkedIn + Instagram, indépendamment de la vue sélectionnée
   const visibility = computeKPIs(allCurrent).totalViews;
   document.getElementById('kpi-visibility').textContent = formatNumber(visibility);
 
+  replay('kpi-grid');
   return currentPosts;
 }
 
 /* ============ CHART ============ */
 function renderLineChart(currentPosts) {
-  const dates = [...new Set(currentPosts.map(p => p.date))].sort();
-  const ctx = document.getElementById('chart-line').getContext('2d');
-  if (lineChart) lineChart.destroy();
+  const canvas = document.getElementById('chart-line');
+  if (!canvas) return;
+  const dates = [...new Set(currentPosts.map(p => p.date).filter(Boolean))].sort();
+  const ctx = canvas.getContext('2d');
+  if (lineChart) { lineChart.destroy(); lineChart = null; }
   if (dates.length === 0) return;
 
   let datasets;
   if (state.subview === 'global') {
     datasets = [
-      { label: 'Instagram', data: dates.map(d => currentPosts.filter(p => p.date === d && p.platform === 'instagram').reduce((s, p) => s + p.views, 0)), borderColor: '#FFA200', backgroundColor: 'rgba(255,162,0,0.12)', fill: true, tension: 0.3, pointRadius: 3 },
-      { label: 'LinkedIn', data: dates.map(d => currentPosts.filter(p => p.date === d && p.platform === 'linkedin').reduce((s, p) => s + p.views, 0)), borderColor: '#000000', backgroundColor: 'rgba(0,0,0,0.05)', fill: true, tension: 0.3, pointRadius: 3 }
+      { label: 'Instagram', data: dates.map(d => currentPosts.filter(p => p.date === d && p.platform === 'instagram').reduce((s, p) => s + num(p.views), 0)), borderColor: '#FFA200', backgroundColor: 'rgba(255,162,0,0.12)', fill: true, tension: 0.3, pointRadius: 3 },
+      { label: 'LinkedIn', data: dates.map(d => currentPosts.filter(p => p.date === d && p.platform === 'linkedin').reduce((s, p) => s + num(p.views), 0)), borderColor: '#000000', backgroundColor: 'rgba(0,0,0,0.05)', fill: true, tension: 0.3, pointRadius: 3 }
     ];
   } else {
-    const cfg = PLATFORM_CONFIG[state.subview];
-    datasets = [{ label: cfg.label, data: dates.map(d => currentPosts.filter(p => p.date === d).reduce((s, p) => s + p.views, 0)), borderColor: cfg.color, backgroundColor: cfg.color === '#000000' ? 'rgba(0,0,0,0.05)' : 'rgba(255,162,0,0.12)', fill: true, tension: 0.3, pointRadius: 3 }];
+    const cfg = platformConfig(state.subview);
+    datasets = [{ label: cfg.label, data: dates.map(d => currentPosts.filter(p => p.date === d).reduce((s, p) => s + num(p.views), 0)), borderColor: cfg.color, backgroundColor: cfg.color === '#000000' ? 'rgba(0,0,0,0.05)' : 'rgba(255,162,0,0.12)', fill: true, tension: 0.3, pointRadius: 3 }];
   }
 
-  lineChart = new Chart(ctx, {
-    type: 'line',
-    data: { labels: dates, datasets },
-    options: {
-      responsive: true, maintainAspectRatio: false,
-      interaction: { mode: 'index', intersect: false },
-      plugins: { legend: { position: 'bottom', labels: { usePointStyle: true, boxWidth: 8, font: { family: 'Inter', size: 11 } } } },
-      scales: {
-        x: { grid: { display: false }, ticks: { font: { size: 10 } } },
-        y: { grid: { color: '#F0EFEC' }, ticks: { font: { size: 10 } } }
+  try {
+    lineChart = new Chart(ctx, {
+      type: 'line',
+      data: { labels: dates, datasets },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        interaction: { mode: 'index', intersect: false },
+        plugins: { legend: { position: 'bottom', labels: { usePointStyle: true, boxWidth: 8, font: { family: 'Inter', size: 11 } } } },
+        scales: {
+          x: { grid: { display: false }, ticks: { font: { size: 10 } } },
+          y: { grid: { color: '#F0EFEC' }, ticks: { font: { size: 10 } } }
+        }
       }
-    }
-  });
+    });
+  } catch (e) {
+    console.error('Erreur de rendu du graphique :', e);
+  }
+  replay('chart-wrapper');
 }
 
 /* ============ PALMARÈS ============ */
 function renderRanking(elId, posts, valueFn, formatFn) {
-  const top3 = [...posts].sort((a, b) => valueFn(b) - valueFn(a)).slice(0, 3);
   const el = document.getElementById(elId);
+  if (!el) return;
+  const top3 = [...posts].sort((a, b) => valueFn(b) - valueFn(a)).slice(0, 3);
   if (top3.length === 0) {
     el.innerHTML = '<p class="text-xs text-black/35">Pas assez de données sur cette période.</p>';
     return;
   }
   el.innerHTML = top3.map((p, i) => `
     <li class="flex items-center gap-3">
-      <span class="w-6 h-6 rounded-full flex items-center justify-center text-[11px] font-bold ${i === 0 ? 'kpi-accent text-black' : 'bg-black/5 text-black/60'}">${i + 1}</span>
+      <span class="w-6 h-6 rounded-full flex items-center justify-center text-[11px] font-bold shrink-0 ${i === 0 ? 'kpi-accent text-black' : 'bg-black/5 text-black/60'}">${i + 1}</span>
       <div class="min-w-0 flex-1">
-        <p class="text-sm text-black/80 truncate">${escapeHtml(p.title)}</p>
-        <p class="text-[11px] text-black/40">${PLATFORM_CONFIG[p.platform].label} · ${p.date}</p>
+        <p class="text-sm text-black/80 truncate">${escapeHtml(p.title || 'Sans titre')}</p>
+        <p class="text-[11px] text-black/40">${platformConfig(p.platform).label} · ${escapeHtml(p.date || '—')}</p>
       </div>
       <span class="text-sm font-heading font-bold shrink-0">${formatFn(valueFn(p))}</span>
     </li>
@@ -928,7 +1177,8 @@ function renderRanking(elId, posts, valueFn, formatFn) {
 function renderDashboardTable(posts) {
   const tbody = document.getElementById('dashboard-table');
   const empty = document.getElementById('dashboard-empty');
-  const sorted = [...posts].sort((a, b) => b.date.localeCompare(a.date));
+  if (!tbody) return;
+  const sorted = [...posts].sort((a, b) => (b.date || '').localeCompare(a.date || ''));
 
   if (sorted.length === 0) {
     tbody.innerHTML = '';
@@ -939,14 +1189,16 @@ function renderDashboardTable(posts) {
 
   tbody.innerHTML = sorted.map(p => `
     <tr class="border-b border-edo-line last:border-0">
-      <td class="text-black/70">${p.date}</td>
+      <td class="text-black/70 whitespace-nowrap">${escapeHtml(p.date || '—')}</td>
       <td>${platformBadge(p.platform)}</td>
-      <td class="text-black/80">${escapeHtml(p.title)}</td>
+      <td class="text-black/80">${escapeHtml(p.title || 'Sans titre')}</td>
       <td class="text-black/70">${formatNumber(p.views)}</td>
       <td class="text-black/70">${formatNumber(interactions(p))}</td>
       <td class="text-black/70 font-semibold">${engagementRate(p).toFixed(1)} %</td>
     </tr>
   `).join('');
+
+  replay('dashboard-table-wrapper');
 }
 
 /* ============ DASHBOARD ORCHESTRATION ============ */
@@ -965,9 +1217,10 @@ function renderDashboard() {
 
   renderLineChart(currentPosts);
   renderRanking('ranking-engagement', currentPosts, engagementRate, v => v.toFixed(1) + ' %');
-  renderRanking('ranking-views', currentPosts, p => p.views, v => formatNumber(v));
+  renderRanking('ranking-views', currentPosts, p => num(p.views), v => formatNumber(v));
   renderRanking('ranking-interactions', currentPosts, likesComments, v => formatNumber(v));
   renderDashboardTable(currentPosts);
+  replay('ranking-grid');
 }
 
 /* ============ CALENDRIER ============ */
@@ -992,7 +1245,8 @@ function renderCalendar() {
   }
 
   const { year, month } = state.calendar;
-  document.getElementById('cal-month-label').textContent = MONTH_NAMES[month] + ' ' + year;
+  const label = document.getElementById('cal-month-label');
+  if (label) label.textContent = MONTH_NAMES[month] + ' ' + year;
 
   const firstOfMonth = new Date(year, month, 1);
   const daysInMonth = new Date(year, month + 1, 0).getDate();
@@ -1004,20 +1258,24 @@ function renderCalendar() {
   while (cells.length % 7 !== 0) cells.push(null);
 
   const grid = document.getElementById('cal-grid');
+  if (!grid) return;
+
   grid.innerHTML = cells.map(d => {
     if (d === null) return `<div class="cal-cell bg-white"></div>`;
     const iso = `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
     const dayPosts = state.posts.filter(p => p.date === iso);
     const hasPost = dayPosts.length > 0;
     const selected = state.calendar.selectedDate === iso;
-    const dots = dayPosts.slice(0, 6).map(p => `<span class="cal-dot ${p.platform === 'instagram' ? 'bg-edo-orange' : 'bg-black'}" title="${escapeHtml(p.title)}"></span>`).join('');
+    const dots = dayPosts.slice(0, 6).map(p => `<span class="cal-dot ${p.platform === 'instagram' ? 'bg-edo-orange' : 'bg-black'}" title="${escapeHtml(p.title || '')}"></span>`).join('');
     return `
-      <div class="cal-cell bg-white p-2 flex flex-col gap-1.5" data-has-post="${hasPost}" data-selected="${selected}" onclick="${hasPost ? `selectCalDay('${iso}')` : ''}">
-        <span class="text-xs text-black/50">${d}</span>
+      <div class="cal-cell bg-white p-1.5 sm:p-2 flex flex-col gap-1.5" data-has-post="${hasPost}" data-selected="${selected}" onclick="${hasPost ? `selectCalDay('${iso}')` : ''}">
+        <span class="text-[11px] sm:text-xs text-black/50">${d}</span>
         <div class="flex flex-wrap gap-1">${dots}</div>
       </div>
     `;
   }).join('');
+
+  replay('cal-wrapper');
 
   if (state.calendar.selectedDate) renderCalDayPanel(state.calendar.selectedDate);
 }
@@ -1035,10 +1293,10 @@ function renderCalDayPanel(iso) {
   panel.classList.remove('hidden');
   document.getElementById('cal-day-title').textContent = 'Publications du ' + iso;
   document.getElementById('cal-day-posts').innerHTML = dayPosts.map(p => `
-    <div class="flex items-center justify-between border border-edo-line rounded-lg px-3 py-2">
+    <div class="flex items-center justify-between border border-edo-line rounded-lg px-3 py-2 gap-3">
       <div class="flex items-center gap-2 min-w-0">
         ${platformBadge(p.platform)}
-        <p class="text-sm text-black/80 truncate">${escapeHtml(p.title)}</p>
+        <p class="text-sm text-black/80 truncate">${escapeHtml(p.title || 'Sans titre')}</p>
       </div>
       <span class="text-xs text-black/50 shrink-0">${formatNumber(p.views)} vues · ${engagementRate(p).toFixed(1)} %</span>
     </div>
@@ -1048,25 +1306,36 @@ function renderCalDayPanel(iso) {
 /* ============ SWIPE FILE ============ */
 window.handleSwipeSubmit = async function (evt) {
   evt.preventDefault();
-  if (!isConfigured) {
-    alert("Configure Firebase avant d'ajouter une idée (voir commentaire en haut du script).");
+  if (!isConfigured || !db) {
+    alert("Configure Firebase avant d'ajouter une idée.");
     return;
   }
-  const url = document.getElementById('f-swipe-url').value.trim();
-  const note = document.getElementById('f-swipe-note').value.trim();
+  const url = (document.getElementById('f-swipe-url').value || '').trim();
+  const note = (document.getElementById('f-swipe-note').value || '').trim();
 
-  await addDoc(swipeCol(), { url, note, createdAt: serverTimestamp() });
-  evt.target.reset();
+  try {
+    await addDoc(swipeCol(), { url, note, createdAt: serverTimestamp() });
+    evt.target.reset();
+  } catch (e) {
+    console.error(e);
+    alert("Impossible d'enregistrer cette idée pour le moment.");
+  }
 };
 
 window.deleteSwipe = async function (id) {
   if (!confirm('Supprimer cette idée de la veille ?')) return;
-  await deleteDoc(doc(db, 'swipe_file', id));
+  try {
+    await deleteDoc(doc(db, 'swipe_file', id));
+  } catch (e) {
+    console.error(e);
+    alert("Impossible de supprimer cette idée pour le moment.");
+  }
 };
 
 function renderSwipeGrid() {
   const grid = document.getElementById('swipe-grid');
   const empty = document.getElementById('swipe-empty');
+  if (!grid) return;
 
   if (state.swipes.length === 0) {
     grid.innerHTML = '';
@@ -1076,11 +1345,11 @@ function renderSwipeGrid() {
   empty.classList.add('hidden');
 
   grid.innerHTML = state.swipes.map(s => {
-    const dateLabel = s.createdAt && s.createdAt.toDate ? s.createdAt.toDate().toLocaleDateString('fr-FR') : '';
-    let host = s.url;
+    const dateLabel = s.createdAt && typeof s.createdAt.toDate === 'function' ? s.createdAt.toDate().toLocaleDateString('fr-FR') : '';
+    let host = s.url || '';
     try { host = new URL(s.url).hostname.replace('www.', ''); } catch (e) {}
     return `
-      <div class="bg-white border border-edo-line rounded-2xl p-4 flex flex-col gap-2">
+      <div class="card-hover bg-white border border-edo-line rounded-2xl p-4 flex flex-col gap-2 shadow-sm">
         <a href="${escapeHtml(s.url)}" target="_blank" rel="noopener" class="text-sm font-semibold text-edo-orange hover:underline truncate">${escapeHtml(host)}</a>
         <p class="text-sm text-black/70 leading-snug">${escapeHtml(s.note)}</p>
         <div class="flex items-center justify-between mt-1">
@@ -1090,14 +1359,16 @@ function renderSwipeGrid() {
       </div>
     `;
   }).join('');
+
+  replay('swipe-grid');
 }
 
 /* ============ INIT ============ */
 function init() {
-  document.getElementById('f-date').value = toISO(todayDate());
+  const dateField = document.getElementById('f-date');
+  if (dateField) dateField.value = toISO(todayDate());
   renderMetricsGrid();
   renderFollowers();
-  initListeners();
 }
 
 init();
