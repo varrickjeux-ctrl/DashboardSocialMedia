@@ -3,10 +3,10 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-<title>EDO Campus — Dashboard Réseaux Sociaux</title>
+<title>Communication EDO — Centre de contrôle réseaux sociaux</title>
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@600;700;800;900&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
 <script src="https://cdn.tailwindcss.com"></script>
 <script>
   tailwind.config = {
@@ -16,6 +16,7 @@
           edo: {
             black: '#000000',
             ink: '#0D0D0D',
+            ink2: '#161616',
             orange: '#FFA200',
             yellow: '#FFC300',
             white: '#FFFFFF',
@@ -26,6 +27,10 @@
         fontFamily: {
           heading: ['Montserrat', 'sans-serif'],
           body: ['Inter', 'sans-serif']
+        },
+        boxShadow: {
+          glow: '0 0 0 1px rgba(255,162,0,0.25), 0 0 24px rgba(255,162,0,0.35)',
+          glowSm: '0 0 0 1px rgba(255,162,0,0.3), 0 0 12px rgba(255,195,0,0.35)'
         }
       }
     }
@@ -37,24 +42,39 @@
   body { font-family: 'Inter', sans-serif; background:#FAFAF9; }
   .font-heading { font-family: 'Montserrat', sans-serif; }
   ::selection { background:#FFC300; color:#000; }
+  ::-webkit-scrollbar { width: 8px; height: 8px; }
+  ::-webkit-scrollbar-thumb { background: #E7E5E2; border-radius: 8px; }
+  ::-webkit-scrollbar-thumb:hover { background: #FFA200; }
 
-  .nav-btn[data-active="true"] .nav-label { color:#000; background:#FFFFFF; }
-  .nav-btn[data-active="true"] .nav-label::before {
-    content:""; position:absolute; left:0; top:8px; bottom:8px; width:3px;
-    background:linear-gradient(180deg,#FFA200,#FFC300); border-radius:2px;
+  /* ===== Sidebar / nav ===== */
+  .nav-btn .nav-label {
+    position: relative; border: 1px solid transparent;
   }
-  .nav-label { position:relative; }
+  .nav-btn[data-active="true"] .nav-label {
+    color:#fff; background:rgba(255,162,0,0.12);
+    border-color: rgba(255,162,0,0.35);
+    box-shadow: inset 0 0 0 1px rgba(255,162,0,0.08), 0 0 18px rgba(255,162,0,0.18);
+  }
+  .nav-btn[data-active="true"] .nav-label::before {
+    content:""; position:absolute; left:-12px; top:8px; bottom:8px; width:3px;
+    background:linear-gradient(180deg,#FFA200,#FFC300); border-radius:2px;
+    box-shadow: 0 0 10px rgba(255,162,0,0.9);
+  }
+  .nav-btn:not([data-active="true"]):hover .nav-label { background: rgba(255,255,255,0.05); }
+
   .bottom-nav-btn[data-active="true"] { color:#FFA200; }
-  .bottom-nav-btn[data-active="false"] { color:rgba(255,255,255,0.5); }
+  .bottom-nav-btn[data-active="true"] .bn-dot { opacity:1; }
+  .bottom-nav-btn[data-active="false"] { color:rgba(255,255,255,0.45); }
+  .bn-dot { opacity:0; transition: opacity .2s ease; }
 
-  .toggle-btn[data-active="true"] { background:#000; color:#fff; }
-  .toggle-btn[data-active="false"] { background:#fff; color:#6B6B6B; }
+  .toggle-btn[data-active="true"] .toggle-inner { background:#000; color:#fff; box-shadow: 0 0 14px rgba(0,0,0,0.25); }
+  .toggle-btn[data-active="false"] .toggle-inner { background:#fff; color:#6B6B6B; }
 
-  .range-btn[data-active="true"] { background:#000; color:#fff; }
-  .range-btn[data-active="false"] { background:#fff; color:#3A3A3A; }
+  .range-btn[data-active="true"] .range-inner { background:#000; color:#fff; }
+  .range-btn[data-active="false"] .range-inner { background:transparent; color:#3A3A3A; }
 
-  .subview-btn[data-active="true"] { background:linear-gradient(135deg,#FFA200,#FFC300); color:#000; }
-  .subview-btn[data-active="false"] { background:#fff; color:#3A3A3A; }
+  .subview-btn[data-active="true"] .subview-inner { background:linear-gradient(135deg,#FFA200,#FFC300); color:#000; box-shadow: 0 4px 14px rgba(255,162,0,0.35); }
+  .subview-btn[data-active="false"] .subview-inner { background:transparent; color:#3A3A3A; }
 
   .view { display:none; }
   .view[data-visible="true"] { display:block; }
@@ -64,67 +84,131 @@
   }
 
   .kpi-accent { background: linear-gradient(135deg,#FFA200,#FFC300); }
+  .text-gradient { background: linear-gradient(135deg,#FFA200,#FFC300); -webkit-background-clip:text; background-clip:text; color:transparent; }
 
-  table.data-table th, table.data-table td { padding: 10px 14px; }
-  table.data-table tbody tr:hover { background:#FAFAF9; }
+  table.data-table th, table.data-table td { padding: 11px 16px; }
+  table.data-table tbody tr:hover { background:#FFFBF2; }
 
   .cal-dot { width:6px; height:6px; border-radius:9999px; display:inline-block; }
-  .cal-cell { min-height: 86px; }
-  .cal-cell[data-has-post="true"]:hover { background:#FAFAF9; cursor:pointer; }
-  .cal-cell[data-selected="true"] { outline: 2px solid #FFA200; outline-offset:-2px; }
+  .cal-cell { min-height: 92px; }
+  .cal-cell[data-has-post="true"]:hover { background:#FFFBF2; cursor:pointer; }
+  .cal-cell[data-selected="true"] { outline: 2px solid #FFA200; outline-offset:-2px; box-shadow: inset 0 0 0 1px #FFA200; }
 
   @media (max-width: 640px) {
-    .cal-cell { min-height: 52px; }
+    .cal-cell { min-height: 54px; }
     .cal-dot { width: 5px; height: 5px; }
   }
 
-  /* Fade helper retriggered on each render */
-  .fade-target { opacity: 1; transition: opacity 0.45s ease, transform 0.45s ease; }
+  /* ===== Glass header ===== */
+  .glass-header {
+    background: rgba(255,255,255,0.72);
+    backdrop-filter: blur(16px) saturate(160%);
+    -webkit-backdrop-filter: blur(16px) saturate(160%);
+    border-bottom: 1px solid rgba(0,0,0,0.06);
+  }
+
+  /* ===== XP / Level badge ===== */
+  .xp-badge {
+    background: linear-gradient(135deg,#111,#000);
+    border: 1px solid rgba(255,162,0,0.5);
+    box-shadow: 0 0 16px rgba(255,162,0,0.25);
+  }
+
+  /* ===== Animations (desktop) ===== */
+  .fade-target { opacity: 1; transition: opacity 0.4s ease, transform 0.4s ease; }
   .fade-target.fade-out { opacity: 0; transform: translateY(6px); }
 
-  @keyframes scaleIn {
-    from { opacity: 0; transform: scale(0.96); }
-    to { opacity: 1; transform: scale(1); }
-  }
+  @keyframes scaleIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
   .anim-scale-in { animation: scaleIn 0.35s ease; }
 
-  @keyframes fadeSlideUp {
-    from { opacity: 0; transform: translateY(10px); }
-    to { opacity: 1; transform: translateY(0); }
-  }
+  @keyframes fadeSlideUp { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
   .anim-fade-up { animation: fadeSlideUp 0.4s ease; }
 
-  .card-hover { transition: box-shadow 0.25s ease, transform 0.25s ease; }
-  .card-hover:hover { box-shadow: 0 8px 24px rgba(0,0,0,0.06); transform: translateY(-1px); }
+  @keyframes floatSlow { 0%,100% { transform: translateY(0px); } 50% { transform: translateY(-8px); } }
+  .anim-float { animation: floatSlow 4s ease-in-out infinite; }
+
+  @keyframes pulseGlow { 0%,100% { box-shadow: 0 0 8px rgba(255,162,0,0.35); } 50% { box-shadow: 0 0 20px rgba(255,162,0,0.7); } }
+  .glow-pulse { animation: pulseGlow 2.2s ease-in-out infinite; }
+
+  .card-hover { transition: box-shadow 0.25s ease, transform 0.25s ease, border-color .25s ease; }
+  .card-hover:hover { box-shadow: 0 10px 28px rgba(0,0,0,0.08); transform: translateY(-2px); border-color: rgba(255,162,0,0.35); }
 
   .btn-press { transition: transform 0.15s ease, box-shadow 0.2s ease, opacity 0.2s ease; }
-  .btn-press:hover { transform: scale(1.015); }
-  .btn-press:active { transform: scale(0.98); }
+  .btn-press:hover { transform: translateY(-1px) scale(1.015); }
+  .btn-press:active { transform: scale(0.97) translateY(0); }
 
   #login-screen { transition: opacity 0.4s ease; }
   #app-shell { transition: opacity 0.4s ease; }
+  #loading-screen { transition: opacity 0.5s ease; }
+
+  /* Kill heavy motion on mobile — instant, native-app-like nav */
+  @media (max-width: 767px) {
+    .card-hover, .btn-press, .anim-fade-up, .anim-scale-in, .anim-float, .glow-pulse, .fade-target {
+      transition: none !important;
+      animation: none !important;
+      transform: none !important;
+    }
+    .card-hover:hover, .btn-press:hover, .btn-press:active { box-shadow: none !important; transform: none !important; }
+  }
 
   @media (prefers-reduced-motion: reduce) {
     * { transition: none !important; animation: none !important; }
   }
+
+  /* ===== Loading screen ===== */
+  .loading-track { background: rgba(255,255,255,0.08); border: 1px solid rgba(255,162,0,0.25); }
+  .loading-fill {
+    background: linear-gradient(90deg,#FFA200,#FFC300);
+    width: 0%;
+    box-shadow: 0 0 18px rgba(255,162,0,0.7);
+    transition: width .25s linear;
+  }
+  .loading-fill.striped {
+    background-image: linear-gradient(135deg, rgba(0,0,0,0.15) 25%, transparent 25%, transparent 50%, rgba(0,0,0,0.15) 50%, rgba(0,0,0,0.15) 75%, transparent 75%, transparent);
+    background-size: 22px 22px;
+  }
+  @keyframes stripeMove { from { background-position: 0 0; } to { background-position: 44px 0; } }
+  .loading-fill.striped { animation: stripeMove 1s linear infinite; }
+
+  @keyframes phraseIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+  .phrase-anim { animation: phraseIn 0.35s ease; }
+
+  /* ===== Kanban ===== */
+  .kanban-col { background: #F3F1EC; border: 1px solid #E7E5E2; }
+  .kanban-col[data-dragover="true"] { background: #FFF6E6; border-color: #FFA200; box-shadow: inset 0 0 0 2px rgba(255,162,0,0.4); }
+  .kanban-card { cursor: grab; touch-action: none; }
+  .kanban-card:active { cursor: grabbing; }
+  .kanban-card.dragging { opacity: 0.4; }
+
+  /* ===== Swatch ===== */
+  .swatch { cursor: pointer; transition: transform .2s ease, box-shadow .2s ease; }
+  .swatch:hover { transform: translateY(-3px); box-shadow: 0 8px 20px rgba(0,0,0,0.12); }
+
+  /* ===== Empty state illustration blob ===== */
+  .empty-blob { background: radial-gradient(circle at 30% 30%, rgba(255,195,0,0.35), rgba(255,162,0,0.08) 60%, transparent 70%); }
 </style>
 </head>
 <body class="text-edo-ink">
 
 <!-- ============ AUTH CHECK SPLASH ============ -->
-<div id="auth-splash" class="fixed inset-0 z-[60] bg-black flex items-center justify-center">
-  <p class="font-heading font-extrabold text-white text-xl tracking-tight">EDO Campus</p>
+<div id="auth-splash" class="fixed inset-0 z-[70] bg-black flex items-center justify-center">
+  <p class="font-heading font-extrabold text-white text-xl tracking-tight">Communication <span class="text-gradient">EDO</span></p>
 </div>
 
 <!-- ============ LOGIN SCREEN ============ -->
-<div id="login-screen" class="hidden fixed inset-0 z-50 bg-black flex items-center justify-center px-6 opacity-0">
-  <div class="w-full max-w-sm anim-scale-in">
+<div id="login-screen" class="hidden fixed inset-0 z-50 bg-black flex items-center justify-center px-6 opacity-0 overflow-hidden">
+  <div class="absolute inset-0 pointer-events-none">
+    <div class="absolute -top-24 -left-24 w-96 h-96 rounded-full anim-float" style="background: radial-gradient(circle, rgba(255,162,0,0.25), transparent 70%); filter: blur(10px);"></div>
+    <div class="absolute -bottom-24 -right-24 w-96 h-96 rounded-full anim-float" style="background: radial-gradient(circle, rgba(255,195,0,0.2), transparent 70%); filter: blur(10px); animation-delay:-2s;"></div>
+  </div>
+
+  <div class="relative w-full max-w-sm anim-scale-in">
     <div class="text-center mb-8">
-      <p class="font-heading font-extrabold text-2xl text-white tracking-tight">EDO Campus</p>
-      <p class="text-sm text-white/50 mt-1">Pilotage réseaux sociaux</p>
+      <p class="font-heading font-black text-3xl text-white tracking-tight">Communication <span class="text-gradient">EDO</span></p>
+      <p class="text-sm text-white/50 mt-1.5">Centre de contrôle réseaux sociaux</p>
     </div>
 
-    <form id="login-form" class="bg-white rounded-2xl p-6 space-y-4 shadow-2xl" onsubmit="handleLogin(event)">
+    <form id="login-form" class="bg-white rounded-2xl p-6 space-y-4 shadow-2xl border border-white/10" onsubmit="handleLogin(event)">
       <div>
         <label class="block text-xs font-semibold text-black/60 mb-1.5">Email</label>
         <input required type="email" id="login-email" autocomplete="username" placeholder="prenom.nom@edocampus.fr" class="w-full border border-edo-line rounded-lg px-3 py-2.5 text-sm bg-white transition-colors" />
@@ -136,7 +220,7 @@
 
       <p id="login-error" class="hidden text-xs font-medium text-red-500 bg-red-50 border border-red-100 rounded-lg px-3 py-2"></p>
 
-      <button type="submit" id="login-submit" class="btn-press w-full py-3 rounded-xl font-heading font-bold text-sm text-black kpi-accent disabled:opacity-50">
+      <button type="submit" id="login-submit" class="btn-press w-full py-3 rounded-xl font-heading font-bold text-sm text-black kpi-accent disabled:opacity-50 shadow-glowSm">
         Se connecter
       </button>
     </form>
@@ -147,18 +231,46 @@
   </div>
 </div>
 
+<!-- ============ LOADING SCREEN (post-login) ============ -->
+<div id="loading-screen" class="hidden fixed inset-0 z-[65] bg-black flex items-center justify-center px-6 opacity-0 overflow-hidden">
+  <div class="absolute inset-0 pointer-events-none">
+    <div class="absolute top-1/4 left-1/4 w-72 h-72 rounded-full anim-float" style="background: radial-gradient(circle, rgba(255,162,0,0.22), transparent 70%); filter: blur(20px);"></div>
+    <div class="absolute bottom-1/4 right-1/4 w-72 h-72 rounded-full anim-float" style="background: radial-gradient(circle, rgba(255,195,0,0.18), transparent 70%); filter: blur(20px); animation-delay:-1.5s;"></div>
+  </div>
+
+  <div class="relative w-full max-w-md text-center">
+    <p class="font-heading font-black text-2xl sm:text-3xl text-white tracking-tight mb-1">Communication <span class="text-gradient">EDO</span></p>
+    <p class="text-[11px] uppercase tracking-[0.2em] text-white/40 font-semibold mb-10">Chargement du poste de pilotage</p>
+
+    <div class="loading-track w-full h-4 rounded-full overflow-hidden">
+      <div id="loading-fill" class="loading-fill striped h-full rounded-full"></div>
+    </div>
+    <p id="loading-pct" class="text-white/50 text-xs font-mono mt-2">0%</p>
+
+    <div class="h-10 mt-6 flex items-center justify-center">
+      <p id="loading-phrase" class="phrase-anim text-white/80 text-sm font-medium">Connexion à la matrice EDO…</p>
+    </div>
+
+    <div class="mt-8 flex items-center justify-center gap-1.5">
+      <span class="xp-badge px-3 py-1 rounded-full text-[10px] font-heading font-bold text-edo-orange">LVL UP</span>
+      <span class="text-white/30 text-[10px]">•</span>
+      <span class="text-white/40 text-[10px] font-medium">Ne coupe pas le Wi-Fi, l'équipe compte sur toi</span>
+    </div>
+  </div>
+</div>
+
 <!-- ============ APP SHELL (masqué tant que non connecté) ============ -->
 <div id="app-shell" class="hidden min-h-screen opacity-0">
 
   <!-- SIDEBAR (desktop / tablette) -->
-  <aside class="hidden md:flex w-64 shrink-0 bg-black text-white flex-col justify-between fixed inset-y-0 left-0">
-    <div>
+  <aside class="hidden md:flex w-64 shrink-0 bg-black text-white flex-col justify-between fixed inset-y-0 left-0 z-30">
+    <div class="overflow-y-auto">
       <div class="px-6 pt-8 pb-6">
-        <p class="font-heading font-extrabold text-xl tracking-tight leading-none">EDO Campus</p>
-        <p class="text-xs text-white/50 mt-1">Pilotage réseaux sociaux</p>
+        <p class="font-heading font-black text-xl tracking-tight leading-none">Communication <span class="text-gradient">EDO</span></p>
+        <p class="text-xs text-white/40 mt-1.5">Centre de contrôle</p>
       </div>
 
-      <nav class="mt-2 flex flex-col gap-1 px-3">
+      <nav class="mt-2 flex flex-col gap-1.5 px-3">
         <button class="nav-btn" data-tab="saisie" data-active="true" onclick="switchTab('saisie')">
           <span class="nav-label flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-white/70 transition-all duration-300">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
@@ -177,10 +289,22 @@
             Calendrier
           </span>
         </button>
+        <button class="nav-btn" data-tab="taches" data-active="false" onclick="switchTab('taches')">
+          <span class="nav-label flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-white/70 transition-all duration-300">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="18" rx="1.5"/><rect x="10.5" y="3" width="7" height="12" rx="1.5"/><rect x="18" y="3" width="3" height="7" rx="1.5"/></svg>
+            Quêtes &amp; tâches
+          </span>
+        </button>
         <button class="nav-btn" data-tab="swipe" data-active="false" onclick="switchTab('swipe')">
           <span class="nav-label flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-white/70 transition-all duration-300">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20l-8-8a5 5 0 117-7l1 1 1-1a5 5 0 117 7l-8 8z"/></svg>
             Swipe file
+          </span>
+        </button>
+        <button class="nav-btn" data-tab="brand" data-active="false" onclick="switchTab('brand')">
+          <span class="nav-label flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-white/70 transition-all duration-300">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><circle cx="8.5" cy="10.5" r="1.3" fill="currentColor" stroke="none"/><circle cx="12.5" cy="7.5" r="1.3" fill="currentColor" stroke="none"/><circle cx="15.5" cy="11.5" r="1.3" fill="currentColor" stroke="none"/><path d="M12 21a9 9 0 006-15.8"/></svg>
+            Brand Center
           </span>
         </button>
       </nav>
@@ -206,31 +330,38 @@
       ⚠️ Config Firebase non renseignée — remplace l'objet <code class="font-mono text-xs bg-black/5 px-1 rounded">firebaseConfig</code> en bas du fichier avant de déployer.
     </div>
 
-    <!-- APP HEADER -->
-    <div class="flex items-center justify-between gap-3 px-4 md:px-8 py-4 border-b border-edo-line bg-white flex-wrap">
-      <div>
-        <p class="font-heading font-bold text-sm">EDO Campus</p>
-        <p class="text-[11px] text-black/40 hidden sm:block">Suivi de performance réseaux sociaux</p>
+    <!-- APP HEADER (glass, full width, breadcrumb) -->
+    <div class="glass-header sticky top-0 z-20 flex items-center justify-between gap-3 px-4 md:px-8 py-3.5 flex-wrap">
+      <div class="flex items-center gap-3 min-w-0">
+        <div class="w-9 h-9 rounded-xl kpi-accent flex items-center justify-center font-heading font-black text-xs text-black shrink-0 shadow-glowSm">EDO</div>
+        <div class="min-w-0">
+          <p class="text-[11px] text-black/40 flex items-center gap-1.5 flex-wrap">
+            <span>Communication EDO</span>
+            <span class="text-black/25">/</span>
+            <span id="breadcrumb-current" class="text-black/70 font-semibold">Saisie &amp; historique</span>
+          </p>
+          <p id="breadcrumb-sub" class="font-heading font-bold text-sm sm:text-base truncate">Ajoute tes performances du jour</p>
+        </div>
       </div>
 
-      <div class="flex items-center gap-3 sm:gap-6 flex-wrap">
+      <div class="flex items-center gap-3 sm:gap-5 flex-wrap">
         <!-- Compteurs abonnés -->
         <div class="flex items-center gap-3 sm:gap-4">
           <div class="flex items-center gap-2">
             <span class="w-2 h-2 rounded-full bg-black shrink-0"></span>
             <div class="leading-none">
               <p id="followers-linkedin" class="font-heading font-bold text-sm">—</p>
-              <p class="text-[10px] text-black/40 hidden sm:block">Abonnés LinkedIn</p>
+              <p class="text-[10px] text-black/40 hidden sm:block">LinkedIn</p>
             </div>
           </div>
           <div class="flex items-center gap-2">
             <span class="w-2 h-2 rounded-full bg-edo-orange shrink-0"></span>
             <div class="leading-none">
               <p id="followers-instagram" class="font-heading font-bold text-sm">—</p>
-              <p class="text-[10px] text-black/40 hidden sm:block">Abonnés Instagram</p>
+              <p class="text-[10px] text-black/40 hidden sm:block">Instagram</p>
             </div>
           </div>
-          <button onclick="toggleFollowersPanel()" title="Modifier les compteurs" class="btn-press w-7 h-7 flex items-center justify-center rounded-md border border-edo-line hover:bg-edo-paper">
+          <button onclick="toggleFollowersPanel()" title="Modifier les compteurs" class="btn-press w-7 h-7 flex items-center justify-center rounded-md border border-edo-line hover:bg-edo-paper bg-white">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 3a2.85 2.85 0 114 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>
           </button>
         </div>
@@ -246,6 +377,17 @@
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#000" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.2" cy="6.8" r="1"/></svg>
           </a>
         </div>
+
+        <div class="w-px h-8 bg-edo-line hidden lg:block"></div>
+
+        <!-- Avatar statique -->
+        <div class="hidden lg:flex items-center gap-2.5">
+          <div class="w-9 h-9 rounded-full bg-black text-white flex items-center justify-center font-heading font-bold text-xs shrink-0">CM</div>
+          <div class="leading-none">
+            <p class="text-xs font-semibold">Community Manager</p>
+            <span class="xp-badge inline-block mt-1 px-2 py-0.5 rounded-full text-[9px] font-heading font-bold text-edo-orange">EN LIGNE</span>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -260,48 +402,50 @@
 
     <!-- VIEW: SAISIE + HISTORIQUE -->
     <section id="view-saisie" class="view" data-visible="true">
-      <div class="max-w-3xl mx-auto px-4 md:px-8 py-8 md:py-10">
-        <p id="form-title" class="font-heading font-bold text-2xl">Ajouter une publication</p>
-        <p class="text-sm text-black/50 mt-1">Renseignez les performances d'un post en quelques secondes.</p>
+      <div class="w-full px-4 md:px-8 py-8 md:py-10 2xl:grid 2xl:grid-cols-[minmax(0,560px)_1fr] 2xl:gap-8 2xl:items-start">
+        <div>
+          <p id="form-title" class="font-heading font-bold text-2xl">Ajouter une publication</p>
+          <p class="text-sm text-black/50 mt-1">Renseigne les performances d'un post en quelques secondes. +50 XP à la clé.</p>
 
-        <form id="post-form" class="mt-6 md:mt-8 bg-white border border-edo-line rounded-2xl p-5 md:p-6 space-y-6 shadow-sm" onsubmit="handleSubmit(event)">
+          <form id="post-form" class="mt-6 md:mt-8 bg-white border border-edo-line rounded-2xl p-5 md:p-6 space-y-6 shadow-sm" onsubmit="handleSubmit(event)">
 
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
-            <div>
-              <label class="block text-xs font-semibold text-black/60 mb-1.5">Date du post</label>
-              <input required type="date" id="f-date" class="w-full border border-edo-line rounded-lg px-3 py-2.5 text-sm bg-white transition-colors" />
-            </div>
-            <div>
-              <label class="block text-xs font-semibold text-black/60 mb-1.5">Plateforme</label>
-              <div class="grid grid-cols-2 gap-2">
-                <button type="button" id="btn-instagram" class="toggle-btn btn-press" data-active="true" onclick="setPlatform('instagram')">
-                  <span class="flex items-center justify-center gap-2 border border-edo-line rounded-lg px-3 py-2.5 text-sm font-semibold">Instagram</span>
-                </button>
-                <button type="button" id="btn-linkedin" class="toggle-btn btn-press" data-active="false" onclick="setPlatform('linkedin')">
-                  <span class="flex items-center justify-center gap-2 border border-edo-line rounded-lg px-3 py-2.5 text-sm font-semibold">LinkedIn</span>
-                </button>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
+              <div>
+                <label class="block text-xs font-semibold text-black/60 mb-1.5">Date du post</label>
+                <input required type="date" id="f-date" class="w-full border border-edo-line rounded-lg px-3 py-2.5 text-sm bg-white transition-colors" />
+              </div>
+              <div>
+                <label class="block text-xs font-semibold text-black/60 mb-1.5">Plateforme</label>
+                <div class="grid grid-cols-2 gap-2">
+                  <button type="button" id="btn-instagram" class="toggle-btn btn-press" data-active="true" onclick="setPlatform('instagram')">
+                    <span class="toggle-inner flex items-center justify-center gap-2 border border-edo-line rounded-lg px-3 py-2.5 text-sm font-semibold transition-colors">Instagram</span>
+                  </button>
+                  <button type="button" id="btn-linkedin" class="toggle-btn btn-press" data-active="false" onclick="setPlatform('linkedin')">
+                    <span class="toggle-inner flex items-center justify-center gap-2 border border-edo-line rounded-lg px-3 py-2.5 text-sm font-semibold transition-colors">LinkedIn</span>
+                  </button>
+                </div>
               </div>
             </div>
-          </div>
 
-          <div>
-            <label class="block text-xs font-semibold text-black/60 mb-1.5">Titre du post</label>
-            <input required type="text" id="f-title" placeholder="Ex : Journée portes ouvertes" class="w-full border border-edo-line rounded-lg px-3 py-2.5 text-sm bg-white transition-colors" />
-          </div>
+            <div>
+              <label class="block text-xs font-semibold text-black/60 mb-1.5">Titre du post</label>
+              <input required type="text" id="f-title" placeholder="Ex : Journée portes ouvertes" class="w-full border border-edo-line rounded-lg px-3 py-2.5 text-sm bg-white transition-colors" />
+            </div>
 
-          <div id="metrics-grid" class="grid grid-cols-1 sm:grid-cols-3 gap-5"></div>
+            <div id="metrics-grid" class="grid grid-cols-1 sm:grid-cols-3 gap-5"></div>
 
-          <div class="flex items-center gap-3">
-            <button type="submit" id="submit-btn" class="btn-press flex-1 py-3.5 rounded-xl font-heading font-bold text-sm text-black kpi-accent">
-              Ajouter les performances
-            </button>
-            <button type="button" id="cancel-edit-btn" onclick="cancelEdit()" class="hidden btn-press px-5 py-3.5 rounded-xl font-heading font-semibold text-sm border border-edo-line text-black/60 hover:bg-edo-paper">
-              Annuler
-            </button>
-          </div>
-        </form>
+            <div class="flex items-center gap-3">
+              <button type="submit" id="submit-btn" class="btn-press flex-1 py-3.5 rounded-xl font-heading font-bold text-sm text-black kpi-accent shadow-glowSm">
+                Ajouter les performances
+              </button>
+              <button type="button" id="cancel-edit-btn" onclick="cancelEdit()" class="hidden btn-press px-5 py-3.5 rounded-xl font-heading font-semibold text-sm border border-edo-line text-black/60 hover:bg-edo-paper">
+                Annuler
+              </button>
+            </div>
+          </form>
+        </div>
 
-        <div class="mt-8">
+        <div class="mt-8 2xl:mt-0">
           <p class="font-heading font-semibold text-sm text-black/70 mb-3">Historique des publications</p>
           <div class="bg-white border border-edo-line rounded-2xl overflow-x-auto shadow-sm">
             <table class="data-table w-full text-sm min-w-[560px]">
@@ -312,7 +456,11 @@
               </thead>
               <tbody id="history-list" class="fade-target"></tbody>
             </table>
-            <p id="history-empty" class="text-sm text-black/40 px-4 py-6 hidden">Aucune publication enregistrée pour le moment.</p>
+            <div id="history-empty" class="hidden px-4 py-10 text-center">
+              <div class="empty-blob w-20 h-20 rounded-full mx-auto mb-3"></div>
+              <p class="text-sm font-semibold text-black/60">Aucun post ici… l'algorithme pleure.</p>
+              <p class="text-xs text-black/35 mt-1">Ajoute ta première publication pour le consoler.</p>
+            </div>
           </div>
         </div>
       </div>
@@ -320,24 +468,24 @@
 
     <!-- VIEW: DASHBOARD -->
     <section id="view-dashboard" class="view" data-visible="false">
-      <div class="max-w-6xl mx-auto px-4 md:px-8 py-8 md:py-10">
+      <div class="w-full px-4 md:px-8 py-8 md:py-10">
 
         <div class="flex items-center justify-between flex-wrap gap-4">
           <div>
             <p class="font-heading font-bold text-2xl">Dashboard</p>
-            <p class="text-sm text-black/50 mt-1">Vue d'ensemble des performances.</p>
+            <p class="text-sm text-black/50 mt-1">Vue d'ensemble des performances. Que la data soit avec toi.</p>
           </div>
 
           <div class="flex items-center gap-2 overflow-x-auto">
             <div class="flex bg-white border border-edo-line rounded-lg p-1 gap-1 shrink-0">
               <button class="range-btn btn-press" data-active="true" data-range="7d" onclick="setRange('7d')">
-                <span class="px-3.5 py-1.5 rounded-md text-sm font-medium block whitespace-nowrap">7 jours</span>
+                <span class="range-inner px-3.5 py-1.5 rounded-md text-sm font-medium block whitespace-nowrap transition-colors">7 jours</span>
               </button>
               <button class="range-btn btn-press" data-active="false" data-range="30d" onclick="setRange('30d')">
-                <span class="px-3.5 py-1.5 rounded-md text-sm font-medium block whitespace-nowrap">30 jours</span>
+                <span class="range-inner px-3.5 py-1.5 rounded-md text-sm font-medium block whitespace-nowrap transition-colors">30 jours</span>
               </button>
               <button class="range-btn btn-press" data-active="false" data-range="custom" onclick="setRange('custom')">
-                <span class="px-3.5 py-1.5 rounded-md text-sm font-medium block whitespace-nowrap">Personnalisé</span>
+                <span class="range-inner px-3.5 py-1.5 rounded-md text-sm font-medium block whitespace-nowrap transition-colors">Personnalisé</span>
               </button>
             </div>
           </div>
@@ -354,13 +502,13 @@
         <!-- Sub-views -->
         <div class="flex bg-white border border-edo-line rounded-lg p-1 gap-1 mt-5 w-fit overflow-x-auto">
           <button class="subview-btn btn-press" data-active="true" data-subview="global" onclick="setSubview('global')">
-            <span class="px-4 py-1.5 rounded-md text-sm font-semibold block whitespace-nowrap">Vue globale</span>
+            <span class="subview-inner px-4 py-1.5 rounded-md text-sm font-semibold block whitespace-nowrap transition-colors">Vue globale</span>
           </button>
           <button class="subview-btn btn-press" data-active="false" data-subview="linkedin" onclick="setSubview('linkedin')">
-            <span class="px-4 py-1.5 rounded-md text-sm font-semibold block whitespace-nowrap">LinkedIn</span>
+            <span class="subview-inner px-4 py-1.5 rounded-md text-sm font-semibold block whitespace-nowrap transition-colors">LinkedIn</span>
           </button>
           <button class="subview-btn btn-press" data-active="false" data-subview="instagram" onclick="setSubview('instagram')">
-            <span class="px-4 py-1.5 rounded-md text-sm font-semibold block whitespace-nowrap">Instagram</span>
+            <span class="subview-inner px-4 py-1.5 rounded-md text-sm font-semibold block whitespace-nowrap transition-colors">Instagram</span>
           </button>
         </div>
 
@@ -386,7 +534,7 @@
             <p id="kpi-visibility" class="font-heading font-extrabold text-2xl mt-2">—</p>
             <p class="text-[10px] text-black/35 mt-2">Vues cumulées LinkedIn + Instagram</p>
           </div>
-          <div class="card-hover bg-white border border-edo-line rounded-2xl p-4 shadow-sm">
+          <div class="card-hover bg-white border border-edo-line rounded-2xl p-4 shadow-sm relative overflow-hidden">
             <p class="text-xs font-semibold text-black/50">Engagement moyen</p>
             <p id="kpi-engagement" class="font-heading font-extrabold text-2xl mt-2">—</p>
             <p id="kpi-engagement-evo" class="text-xs font-semibold mt-2"></p>
@@ -397,11 +545,11 @@
         <div id="chart-wrapper" class="fade-target mt-6 bg-white border border-edo-line rounded-2xl p-4 md:p-5 shadow-sm">
           <p class="font-heading font-semibold text-sm">Évolution des vues</p>
           <p class="text-xs text-black/40 mb-3">Sur la période et la vue sélectionnées</p>
-          <div class="h-64 md:h-72"><canvas id="chart-line"></canvas></div>
+          <div class="h-64 md:h-80"><canvas id="chart-line"></canvas></div>
         </div>
 
         <!-- Palmarès -->
-        <p class="font-heading font-semibold text-lg mt-8">Palmarès</p>
+        <p class="font-heading font-semibold text-lg mt-8">Palmarès <span class="text-black/30 text-sm font-medium">— le tableau des scores</span></p>
         <div id="ranking-grid" class="fade-target grid grid-cols-1 md:grid-cols-3 gap-5 mt-3">
           <div class="card-hover bg-white border border-edo-line rounded-2xl p-5 shadow-sm">
             <p class="font-heading font-semibold text-sm">Top 3 — Taux d'engagement</p>
@@ -428,7 +576,11 @@
             </thead>
             <tbody id="dashboard-table"></tbody>
           </table>
-          <p id="dashboard-empty" class="text-sm text-black/40 px-4 py-6 hidden">Aucune publication sur cette période.</p>
+          <div id="dashboard-empty" class="hidden px-4 py-10 text-center">
+            <div class="empty-blob w-20 h-20 rounded-full mx-auto mb-3"></div>
+            <p class="text-sm font-semibold text-black/60">Rien à afficher sur cette période.</p>
+            <p class="text-xs text-black/35 mt-1">Même les trolls font une pause parfois.</p>
+          </div>
         </div>
 
       </div>
@@ -436,16 +588,16 @@
 
     <!-- VIEW: CALENDRIER -->
     <section id="view-calendrier" class="view" data-visible="false">
-      <div class="max-w-4xl mx-auto px-4 md:px-8 py-8 md:py-10">
+      <div class="w-full px-4 md:px-8 py-8 md:py-10 max-w-5xl">
         <p class="font-heading font-bold text-2xl">Calendrier de suivi</p>
         <p class="text-sm text-black/50 mt-1">Fréquence de publication LinkedIn &amp; Instagram.</p>
 
         <div class="flex items-center justify-between mt-6">
-          <button onclick="shiftMonth(-1)" class="btn-press w-8 h-8 rounded-lg border border-edo-line flex items-center justify-center hover:bg-white">
+          <button onclick="shiftMonth(-1)" class="btn-press w-8 h-8 rounded-lg border border-edo-line flex items-center justify-center hover:bg-white bg-white">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
           </button>
           <p id="cal-month-label" class="font-heading font-bold text-base"></p>
-          <button onclick="shiftMonth(1)" class="btn-press w-8 h-8 rounded-lg border border-edo-line flex items-center justify-center hover:bg-white">
+          <button onclick="shiftMonth(1)" class="btn-press w-8 h-8 rounded-lg border border-edo-line flex items-center justify-center hover:bg-white bg-white">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
           </button>
         </div>
@@ -473,9 +625,65 @@
       </div>
     </section>
 
+    <!-- VIEW: QUÊTES & TÂCHES (Kanban) -->
+    <section id="view-taches" class="view" data-visible="false">
+      <div class="w-full px-4 md:px-8 py-8 md:py-10">
+        <p class="font-heading font-bold text-2xl">Quêtes &amp; tâches</p>
+        <p class="text-sm text-black/50 mt-1">Le kanban de l'équipe. Glisse-dépose pour faire avancer la quête.</p>
+
+        <form id="task-form" class="mt-6 bg-white border border-edo-line rounded-2xl p-4 md:p-5 shadow-sm flex flex-col sm:flex-row items-stretch sm:items-end gap-3" onsubmit="handleTaskSubmit(event)">
+          <div class="flex-1">
+            <label class="block text-xs font-semibold text-black/60 mb-1.5">Titre de la tâche</label>
+            <input required type="text" id="t-title" placeholder="Ex : Storyboard reel rentrée" class="w-full border border-edo-line rounded-lg px-3 py-2.5 text-sm bg-white transition-colors" />
+          </div>
+          <div class="sm:w-48">
+            <label class="block text-xs font-semibold text-black/60 mb-1.5">Assigné·e à</label>
+            <input required type="text" id="t-assignee" placeholder="Ex : Léa" class="w-full border border-edo-line rounded-lg px-3 py-2.5 text-sm bg-white transition-colors" />
+          </div>
+          <div class="sm:w-40">
+            <label class="block text-xs font-semibold text-black/60 mb-1.5">Colonne</label>
+            <select id="t-status" class="w-full border border-edo-line rounded-lg px-3 py-2.5 text-sm bg-white transition-colors">
+              <option value="idees">💡 Idées</option>
+              <option value="encours">🚧 En cours</option>
+              <option value="valide">✅ Validé</option>
+            </select>
+          </div>
+          <button type="submit" class="btn-press px-5 py-2.5 rounded-lg font-heading font-bold text-sm text-black kpi-accent shrink-0">
+            Lancer la quête
+          </button>
+        </form>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6">
+          <div class="kanban-col rounded-2xl p-3 md:p-4" data-status="idees" ondragover="handleColDragOver(event)" ondragleave="handleColDragLeave(event)" ondrop="handleColDrop(event, 'idees')">
+            <div class="flex items-center justify-between px-1 mb-3">
+              <p class="font-heading font-bold text-sm flex items-center gap-2">💡 Idées</p>
+              <span id="count-idees" class="text-[11px] font-bold bg-black/5 text-black/50 rounded-full px-2 py-0.5">0</span>
+            </div>
+            <div id="col-idees" class="space-y-2.5 min-h-[80px]"></div>
+          </div>
+
+          <div class="kanban-col rounded-2xl p-3 md:p-4" data-status="encours" ondragover="handleColDragOver(event)" ondragleave="handleColDragLeave(event)" ondrop="handleColDrop(event, 'encours')">
+            <div class="flex items-center justify-between px-1 mb-3">
+              <p class="font-heading font-bold text-sm flex items-center gap-2">🚧 En cours</p>
+              <span id="count-encours" class="text-[11px] font-bold bg-black/5 text-black/50 rounded-full px-2 py-0.5">0</span>
+            </div>
+            <div id="col-encours" class="space-y-2.5 min-h-[80px]"></div>
+          </div>
+
+          <div class="kanban-col rounded-2xl p-3 md:p-4" data-status="valide" ondragover="handleColDragOver(event)" ondragleave="handleColDragLeave(event)" ondrop="handleColDrop(event, 'valide')">
+            <div class="flex items-center justify-between px-1 mb-3">
+              <p class="font-heading font-bold text-sm flex items-center gap-2">✅ Validé</p>
+              <span id="count-valide" class="text-[11px] font-bold bg-black/5 text-black/50 rounded-full px-2 py-0.5">0</span>
+            </div>
+            <div id="col-valide" class="space-y-2.5 min-h-[80px]"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
     <!-- VIEW: SWIPE FILE -->
     <section id="view-swipe" class="view" data-visible="false">
-      <div class="max-w-4xl mx-auto px-4 md:px-8 py-8 md:py-10">
+      <div class="w-full px-4 md:px-8 py-8 md:py-10 max-w-5xl">
         <p class="font-heading font-bold text-2xl">Swipe file</p>
         <p class="text-sm text-black/50 mt-1">Veille créative partagée par l'équipe.</p>
 
@@ -494,35 +702,168 @@
         </form>
 
         <div id="swipe-grid" class="fade-target grid grid-cols-1 sm:grid-cols-2 gap-4 mt-8"></div>
-        <p id="swipe-empty" class="hidden text-sm text-black/40 mt-8">Aucune idée enregistrée pour le moment — soyez le·la premier·ère à en ajouter une.</p>
+        <div id="swipe-empty" class="hidden text-center mt-8">
+          <div class="empty-blob w-20 h-20 rounded-full mx-auto mb-3"></div>
+          <p class="text-sm font-semibold text-black/60">Le mood board est vide.</p>
+          <p class="text-xs text-black/35 mt-1">Le feed, lui, ne t'attendra pas — sois le·la premier·ère à ajouter une idée.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- VIEW: BRAND CENTER -->
+    <section id="view-brand" class="view" data-visible="false">
+      <div class="w-full px-4 md:px-8 py-8 md:py-10">
+        <p class="font-heading font-bold text-2xl">Brand Center</p>
+        <p class="text-sm text-black/50 mt-1">Tout ce qu'il faut pour rester on-brand, même à 23h un dimanche.</p>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-5 mt-6">
+          <!-- Palette -->
+          <div class="lg:col-span-2 card-hover bg-white border border-edo-line rounded-2xl p-5 shadow-sm">
+            <p class="font-heading font-semibold text-sm mb-1">Palette officielle</p>
+            <p class="text-xs text-black/40 mb-4">Clique sur une couleur pour copier son code hex.</p>
+            <div class="grid grid-cols-2 sm:grid-cols-3 gap-3" id="palette-grid">
+              <button class="swatch btn-press text-left rounded-xl overflow-hidden border border-edo-line" onclick="copyHex('#000000', this)">
+                <div class="h-16" style="background:#000000"></div>
+                <div class="px-3 py-2"><p class="text-xs font-semibold">Noir</p><p class="text-[11px] text-black/40 font-mono">#000000</p></div>
+              </button>
+              <button class="swatch btn-press text-left rounded-xl overflow-hidden border border-edo-line" onclick="copyHex('#0D0D0D', this)">
+                <div class="h-16" style="background:#0D0D0D"></div>
+                <div class="px-3 py-2"><p class="text-xs font-semibold">Ink</p><p class="text-[11px] text-black/40 font-mono">#0D0D0D</p></div>
+              </button>
+              <button class="swatch btn-press text-left rounded-xl overflow-hidden border border-edo-line" onclick="copyHex('#FFA200', this)">
+                <div class="h-16" style="background:#FFA200"></div>
+                <div class="px-3 py-2"><p class="text-xs font-semibold">Orange</p><p class="text-[11px] text-black/40 font-mono">#FFA200</p></div>
+              </button>
+              <button class="swatch btn-press text-left rounded-xl overflow-hidden border border-edo-line" onclick="copyHex('#FFC300', this)">
+                <div class="h-16" style="background:#FFC300"></div>
+                <div class="px-3 py-2"><p class="text-xs font-semibold">Yellow</p><p class="text-[11px] text-black/40 font-mono">#FFC300</p></div>
+              </button>
+              <button class="swatch btn-press text-left rounded-xl overflow-hidden border border-edo-line" onclick="copyHex('#FAFAF9', this)">
+                <div class="h-16 border-b border-edo-line" style="background:#FAFAF9"></div>
+                <div class="px-3 py-2"><p class="text-xs font-semibold">Paper</p><p class="text-[11px] text-black/40 font-mono">#FAFAF9</p></div>
+              </button>
+              <button class="swatch btn-press text-left rounded-xl overflow-hidden border border-edo-line" onclick="copyHex('#E7E5E2', this)">
+                <div class="h-16" style="background:#E7E5E2"></div>
+                <div class="px-3 py-2"><p class="text-xs font-semibold">Line</p><p class="text-[11px] text-black/40 font-mono">#E7E5E2</p></div>
+              </button>
+            </div>
+            <p id="copy-feedback" class="hidden text-[11px] font-semibold text-edo-orange mt-3">Copié dans le presse-papiers !</p>
+          </div>
+
+          <!-- Logo -->
+          <div class="card-hover bg-black text-white rounded-2xl p-5 shadow-sm flex flex-col items-center justify-center text-center">
+            <div class="w-full aspect-square max-w-[160px] rounded-2xl kpi-accent flex items-center justify-center mb-4">
+              <span class="font-heading font-black text-3xl text-black">EDO</span>
+            </div>
+            <p class="font-heading font-semibold text-sm">Logo wordmark</p>
+            <p class="text-[11px] text-white/40 mt-1 mb-4">Export SVG rapide pour les slides et posts.</p>
+            <button onclick="downloadLogo()" class="btn-press w-full py-2.5 rounded-lg font-heading font-bold text-xs kpi-accent text-black">Télécharger le SVG</button>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-5 mt-5">
+          <!-- Typo -->
+          <div class="card-hover bg-white border border-edo-line rounded-2xl p-5 shadow-sm">
+            <p class="font-heading font-semibold text-sm mb-4">Typographie</p>
+            <p class="font-heading font-black text-3xl leading-tight">Montserrat</p>
+            <p class="text-xs text-black/40 mb-4">Titres, boutons, chiffres clés — la voix qui claque.</p>
+            <p class="text-2xl leading-tight" style="font-family:'Inter',sans-serif;">Inter</p>
+            <p class="text-xs text-black/40">Texte courant, légendes, tableaux — la voix qui explique.</p>
+          </div>
+
+          <!-- Voice & tone -->
+          <div class="card-hover bg-white border border-edo-line rounded-2xl p-5 shadow-sm">
+            <p class="font-heading font-semibold text-sm mb-3">Ton de voix</p>
+            <div class="space-y-2.5">
+              <div class="flex items-start gap-2.5">
+                <span class="text-emerald-600 font-bold text-sm shrink-0 mt-0.5">✓</span>
+                <p class="text-sm text-black/70">Direct, complice, un peu taquin — comme un post qu'on aurait envie de liker soi-même.</p>
+              </div>
+              <div class="flex items-start gap-2.5">
+                <span class="text-emerald-600 font-bold text-sm shrink-0 mt-0.5">✓</span>
+                <p class="text-sm text-black/70">Fier sans être pompeux : on célèbre les résultats des étudiants, pas notre propre CV.</p>
+              </div>
+              <div class="flex items-start gap-2.5">
+                <span class="text-red-500 font-bold text-sm shrink-0 mt-0.5">✕</span>
+                <p class="text-sm text-black/70">Jargon corporate et punchlines forcées ("disruptif", "game changer").</p>
+              </div>
+              <div class="flex items-start gap-2.5">
+                <span class="text-red-500 font-bold text-sm shrink-0 mt-0.5">✕</span>
+                <p class="text-sm text-black/70">Plus de trois emojis par post — on n'écrit pas pour l'algorithme, on écrit pour les gens.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Bios copy-paste -->
+        <div class="card-hover bg-white border border-edo-line rounded-2xl p-5 shadow-sm mt-5">
+          <p class="font-heading font-semibold text-sm mb-4">Bios prêtes à coller</p>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div class="border border-edo-line rounded-xl p-4">
+              <p class="text-xs font-semibold text-black/50 mb-2">Instagram</p>
+              <p id="bio-instagram" class="text-sm text-black/75 leading-snug">🎓 EDO Campus — on forme les pros de demain
+📍 Sur le terrain, pas juste sur les bancs
+👇 Toutes nos formations</p>
+              <button onclick="copyBio('bio-instagram', this)" class="btn-press mt-3 text-xs font-semibold text-edo-orange hover:underline">Copier</button>
+            </div>
+            <div class="border border-edo-line rounded-xl p-4">
+              <p class="text-xs font-semibold text-black/50 mb-2">LinkedIn</p>
+              <p id="bio-linkedin" class="text-sm text-black/75 leading-snug">EDO Campus forme les talents de demain à travers des parcours ancrés dans le réel. Suivez-nous pour découvrir nos formations, nos étudiants et nos partenaires entreprises.</p>
+              <button onclick="copyBio('bio-linkedin', this)" class="btn-press mt-3 text-xs font-semibold text-edo-orange hover:underline">Copier</button>
+            </div>
+          </div>
+        </div>
       </div>
     </section>
 
   </main>
 
   <!-- BOTTOM NAV (mobile) -->
-  <nav class="md:hidden fixed bottom-0 inset-x-0 bg-black z-40 flex items-stretch justify-around px-2 pb-[env(safe-area-inset-bottom)]">
-    <button class="bottom-nav-btn btn-press flex-1 flex flex-col items-center gap-1 py-2.5" data-tab="saisie" data-active="true" onclick="switchTab('saisie')">
+  <nav class="md:hidden fixed bottom-0 inset-x-0 bg-black z-40 flex items-stretch justify-around px-1 pb-[env(safe-area-inset-bottom)]">
+    <button class="bottom-nav-btn flex-1 flex flex-col items-center gap-1 py-2.5" data-tab="saisie" data-active="true" onclick="switchTab('saisie')">
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
-      <span class="text-[10px] font-medium">Saisie</span>
+      <span class="text-[9.5px] font-medium">Saisie</span>
+      <span class="bn-dot w-1 h-1 rounded-full bg-edo-orange"></span>
     </button>
-    <button class="bottom-nav-btn btn-press flex-1 flex flex-col items-center gap-1 py-2.5" data-tab="dashboard" data-active="false" onclick="switchTab('dashboard')">
+    <button class="bottom-nav-btn flex-1 flex flex-col items-center gap-1 py-2.5" data-tab="dashboard" data-active="false" onclick="switchTab('dashboard')">
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18M7 15l4-4 3 3 5-6"/></svg>
-      <span class="text-[10px] font-medium">Dashboard</span>
+      <span class="text-[9.5px] font-medium">Dashboard</span>
+      <span class="bn-dot w-1 h-1 rounded-full bg-edo-orange"></span>
     </button>
-    <button class="bottom-nav-btn btn-press flex-1 flex flex-col items-center gap-1 py-2.5" data-tab="calendrier" data-active="false" onclick="switchTab('calendrier')">
+    <button class="bottom-nav-btn flex-1 flex flex-col items-center gap-1 py-2.5" data-tab="calendrier" data-active="false" onclick="switchTab('calendrier')">
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 3v3M16 3v3"/></svg>
-      <span class="text-[10px] font-medium">Calendrier</span>
+      <span class="text-[9.5px] font-medium">Calendrier</span>
+      <span class="bn-dot w-1 h-1 rounded-full bg-edo-orange"></span>
     </button>
-    <button class="bottom-nav-btn btn-press flex-1 flex flex-col items-center gap-1 py-2.5" data-tab="swipe" data-active="false" onclick="switchTab('swipe')">
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20l-8-8a5 5 0 117-7l1 1 1-1a5 5 0 117 7l-8 8z"/></svg>
-      <span class="text-[10px] font-medium">Swipe</span>
+    <button class="bottom-nav-btn flex-1 flex flex-col items-center gap-1 py-2.5" data-tab="taches" data-active="false" onclick="switchTab('taches')">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="18" rx="1.5"/><rect x="10.5" y="3" width="7" height="12" rx="1.5"/><rect x="18" y="3" width="3" height="7" rx="1.5"/></svg>
+      <span class="text-[9.5px] font-medium">Tâches</span>
+      <span class="bn-dot w-1 h-1 rounded-full bg-edo-orange"></span>
     </button>
-    <button class="bottom-nav-btn btn-press flex-1 flex flex-col items-center gap-1 py-2.5 text-white/50" data-active="false" onclick="handleLogout()">
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9"/></svg>
-      <span class="text-[10px] font-medium">Sortir</span>
+    <button class="bottom-nav-btn flex-1 flex flex-col items-center gap-1 py-2.5" onclick="toggleMoreSheet()">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="5" cy="12" r="1.5" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.5" fill="currentColor" stroke="none"/><circle cx="19" cy="12" r="1.5" fill="currentColor" stroke="none"/></svg>
+      <span class="text-[9.5px] font-medium">Plus</span>
     </button>
   </nav>
+
+  <!-- MOBILE "MORE" SHEET -->
+  <div id="more-sheet-backdrop" class="hidden md:hidden fixed inset-0 bg-black/50 z-50" onclick="toggleMoreSheet()"></div>
+  <div id="more-sheet" class="hidden md:hidden fixed bottom-0 inset-x-0 z-50 bg-white rounded-t-3xl p-5 pb-[calc(env(safe-area-inset-bottom)+1.25rem)]">
+    <div class="w-10 h-1 bg-edo-line rounded-full mx-auto mb-5"></div>
+    <button class="w-full flex items-center gap-3 px-3 py-3 rounded-xl hover:bg-edo-paper" onclick="switchTab('swipe'); toggleMoreSheet()">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20l-8-8a5 5 0 117-7l1 1 1-1a5 5 0 117 7l-8 8z"/></svg>
+      <span class="text-sm font-semibold">Swipe file</span>
+    </button>
+    <button class="w-full flex items-center gap-3 px-3 py-3 rounded-xl hover:bg-edo-paper" onclick="switchTab('brand'); toggleMoreSheet()">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 21a9 9 0 006-15.8"/></svg>
+      <span class="text-sm font-semibold">Brand Center</span>
+    </button>
+    <div class="h-px bg-edo-line my-2"></div>
+    <button class="w-full flex items-center gap-3 px-3 py-3 rounded-xl hover:bg-edo-paper text-red-500" onclick="handleLogout()">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9"/></svg>
+      <span class="text-sm font-semibold">Se déconnecter</span>
+    </button>
+  </div>
 
 </div>
 
@@ -548,11 +889,14 @@
           match /app_settings/{settingId} {
             allow read, write: if request.auth != null;
           }
+          match /edo_tasks/{taskId} {
+            allow read, write: if request.auth != null;
+          }
         }
       }
 
-   4. Collections utilisées : "social_posts", "swipe_file", "app_settings"
-      (créées automatiquement au premier enregistrement).
+   4. Collections utilisées : "social_posts", "swipe_file", "app_settings",
+      "edo_tasks" (créées automatiquement au premier enregistrement).
    ========================================================================== */
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
@@ -595,6 +939,7 @@ if (isConfigured) {
 
 const postsCol = () => collection(db, 'social_posts');
 const swipeCol = () => collection(db, 'swipe_file');
+const tasksCol = () => collection(db, 'edo_tasks');
 const settingsDoc = () => doc(db, 'app_settings', 'counters');
 
 /* ============ CONFIG PLATEFORMES ============ */
@@ -606,20 +951,32 @@ function platformConfig(platform) {
   return PLATFORM_CONFIG[platform] || PLATFORM_CONFIG.instagram;
 }
 
+const BREADCRUMB = {
+  saisie: { title: 'Saisie & historique', sub: "Ajoute tes performances du jour" },
+  dashboard: { title: 'Dashboard', sub: "Le pouls de la communication EDO" },
+  calendrier: { title: 'Calendrier', sub: "Qui publie quoi, et quand" },
+  taches: { title: 'Quêtes & tâches', sub: "Le kanban de l'équipe" },
+  swipe: { title: 'Swipe file', sub: "La veille créative de l'équipe" },
+  brand: { title: 'Brand Center', sub: "Rester on-brand en toutes circonstances" }
+};
+
 /* ============ STATE ============ */
 let state = {
   posts: [],
   swipes: [],
+  tasks: [],
   activeTab: 'saisie',
   formPlatform: 'instagram',
   editingId: null,
   range: { type: '7d', start: null, end: null },
   subview: 'global',
   calendar: { year: null, month: null, selectedDate: null },
-  followers: { linkedin: 0, instagram: 0 }
+  followers: { linkedin: 0, instagram: 0 },
+  draggedTaskId: null
 };
 
 let lineChart = null;
+let appIsShown = false;
 
 /* ============ AUTHENTIFICATION ============ */
 window.handleLogin = async function (evt) {
@@ -642,7 +999,7 @@ window.handleLogin = async function (evt) {
 
   try {
     await signInWithEmailAndPassword(auth, email, password);
-    // onAuthStateChanged prend le relais pour afficher l'app
+    // onAuthStateChanged prend le relais pour afficher l'écran de chargement puis l'app
   } catch (err) {
     errorEl.textContent = mapAuthError(err);
     errorEl.classList.remove('hidden');
@@ -678,10 +1035,14 @@ window.handleLogout = async function () {
 function showLogin() {
   document.getElementById('auth-splash').classList.add('hidden');
   const login = document.getElementById('login-screen');
+  const loading = document.getElementById('loading-screen');
   const shell = document.getElementById('app-shell');
 
+  loading.classList.add('opacity-0');
+  setTimeout(() => loading.classList.add('hidden'), 300);
+
   shell.classList.add('opacity-0');
-  setTimeout(() => { shell.classList.add('hidden'); shell.classList.remove('flex'); }, 350);
+  setTimeout(() => { shell.classList.add('hidden'); shell.classList.remove('flex'); }, 300);
 
   login.classList.remove('hidden');
   requestAnimationFrame(() => login.classList.remove('opacity-0'));
@@ -691,24 +1052,93 @@ function showLogin() {
 }
 
 function showApp() {
-  document.getElementById('auth-splash').classList.add('hidden');
-  const login = document.getElementById('login-screen');
+  const loading = document.getElementById('loading-screen');
   const shell = document.getElementById('app-shell');
 
-  login.classList.add('opacity-0');
-  setTimeout(() => login.classList.add('hidden'), 350);
+  loading.classList.add('opacity-0');
+  setTimeout(() => loading.classList.add('hidden'), 400);
 
   shell.classList.remove('hidden');
   shell.classList.add('md:flex');
   requestAnimationFrame(() => shell.classList.remove('opacity-0'));
 }
 
+/* ============ LOADING SCREEN SEQUENCE ============ */
+const LOADING_PHRASES = [
+  "Connexion à la matrice EDO…",
+  "Nourrissage de l'algorithme…",
+  "Calcul du taux de viralité…",
+  "Torréfaction du café de l'équipe…",
+  "Synchronisation des likes…",
+  "Réveil du community manager…",
+  "Compression des punchlines…",
+  "Prêt à buzzer !"
+];
+
+function runLoadingSequence(onDone) {
+  document.getElementById('auth-splash').classList.add('hidden');
+  const login = document.getElementById('login-screen');
+  login.classList.add('opacity-0');
+  setTimeout(() => login.classList.add('hidden'), 300);
+
+  const loading = document.getElementById('loading-screen');
+  const fill = document.getElementById('loading-fill');
+  const pct = document.getElementById('loading-pct');
+  const phraseEl = document.getElementById('loading-phrase');
+
+  fill.style.width = '0%';
+  pct.textContent = '0%';
+
+  loading.classList.remove('hidden');
+  requestAnimationFrame(() => loading.classList.remove('opacity-0'));
+
+  const totalDuration = 2800; // ms
+  const stepEvery = Math.round(totalDuration / LOADING_PHRASES.length);
+  let phraseIndex = 0;
+  let progress = 0;
+
+  const setPhrase = (i) => {
+    phraseEl.classList.remove('phrase-anim');
+    void phraseEl.offsetWidth; // relance l'animation
+    phraseEl.classList.add('phrase-anim');
+    phraseEl.textContent = LOADING_PHRASES[i % LOADING_PHRASES.length];
+  };
+  setPhrase(0);
+
+  requestAnimationFrame(() => { fill.style.width = '100%'; });
+
+  const progressTimer = setInterval(() => {
+    progress = Math.min(100, progress + 4);
+    pct.textContent = progress + '%';
+    if (progress >= 100) clearInterval(progressTimer);
+  }, totalDuration / 25);
+
+  const phraseTimer = setInterval(() => {
+    phraseIndex += 1;
+    if (phraseIndex < LOADING_PHRASES.length) setPhrase(phraseIndex);
+  }, stepEvery);
+
+  setTimeout(() => {
+    clearInterval(progressTimer);
+    clearInterval(phraseTimer);
+    pct.textContent = '100%';
+    setPhrase(LOADING_PHRASES.length - 1);
+    setTimeout(() => { if (typeof onDone === 'function') onDone(); }, 250);
+  }, totalDuration);
+}
+
 if (isConfigured && auth) {
   onAuthStateChanged(auth, (user) => {
     if (user) {
-      showApp();
-      initListeners();
+      if (!appIsShown) {
+        runLoadingSequence(() => {
+          showApp();
+          initListeners();
+          appIsShown = true;
+        });
+      }
     } else {
+      appIsShown = false;
       cleanupListeners();
       showLogin();
     }
@@ -750,6 +1180,13 @@ function initListeners() {
     }, (err) => console.error('Erreur swipe_file :', err));
     unsubscribers.push(unsubSwipe);
 
+    const tasksQuery = query(tasksCol(), orderBy('createdAt', 'desc'));
+    const unsubTasks = onSnapshot(tasksQuery, (snap) => {
+      state.tasks = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      renderKanban();
+    }, (err) => console.error('Erreur edo_tasks :', err));
+    unsubscribers.push(unsubTasks);
+
     const unsubSettings = onSnapshot(settingsDoc(), (snap) => {
       if (snap.exists()) {
         const data = snap.data() || {};
@@ -770,7 +1207,7 @@ function setConnectionStatus(ok) {
   const text = document.getElementById('connection-text');
   if (!dot || !text) return;
   if (ok) {
-    dot.className = 'w-2 h-2 rounded-full bg-emerald-400';
+    dot.className = 'w-2 h-2 rounded-full bg-emerald-400 glow-pulse';
     text.textContent = 'Connecté à Firebase';
   } else {
     dot.className = 'w-2 h-2 rounded-full bg-red-400';
@@ -791,7 +1228,7 @@ function replay(elId) {
 /* ============ TABS ============ */
 window.switchTab = function (tab) {
   state.activeTab = tab;
-  ['saisie', 'dashboard', 'calendrier', 'swipe'].forEach(t => {
+  ['saisie', 'dashboard', 'calendrier', 'taches', 'swipe', 'brand'].forEach(t => {
     const section = document.getElementById('view-' + t);
     if (section) section.dataset.visible = (t === tab);
   });
@@ -801,8 +1238,20 @@ window.switchTab = function (tab) {
   const activeSection = document.getElementById('view-' + tab);
   if (activeSection) activeSection.classList.add('anim-fade-up');
 
+  const crumb = BREADCRUMB[tab];
+  if (crumb) {
+    document.getElementById('breadcrumb-current').textContent = crumb.title;
+    document.getElementById('breadcrumb-sub').textContent = crumb.sub;
+  }
+
   if (tab === 'dashboard') renderDashboard();
   if (tab === 'calendrier') renderCalendar();
+  if (tab === 'taches') renderKanban();
+};
+
+window.toggleMoreSheet = function () {
+  document.getElementById('more-sheet').classList.toggle('hidden');
+  document.getElementById('more-sheet-backdrop').classList.toggle('hidden');
 };
 
 /* ============ FOLLOWERS ============ */
@@ -1303,6 +1752,110 @@ function renderCalDayPanel(iso) {
   `).join('');
 }
 
+/* ============ QUÊTES & TÂCHES (Kanban) ============ */
+const TASK_STATUSES = ['idees', 'encours', 'valide'];
+
+window.handleTaskSubmit = async function (evt) {
+  evt.preventDefault();
+  if (!isConfigured || !db) {
+    alert("Configure Firebase avant d'ajouter une tâche.");
+    return;
+  }
+  const title = (document.getElementById('t-title').value || '').trim();
+  const assignee = (document.getElementById('t-assignee').value || '').trim();
+  const status = document.getElementById('t-status').value;
+
+  try {
+    await addDoc(tasksCol(), { title, assignee, status, createdAt: serverTimestamp() });
+    evt.target.reset();
+    document.getElementById('t-status').value = status;
+  } catch (e) {
+    console.error(e);
+    alert("Impossible de créer cette tâche pour le moment.");
+  }
+};
+
+window.deleteTask = async function (id) {
+  if (!confirm('Supprimer cette tâche ?')) return;
+  try {
+    await deleteDoc(doc(db, 'edo_tasks', id));
+  } catch (e) {
+    console.error(e);
+    alert("Impossible de supprimer cette tâche pour le moment.");
+  }
+};
+
+async function moveTask(id, newStatus) {
+  try {
+    await updateDoc(doc(db, 'edo_tasks', id), { status: newStatus });
+  } catch (e) {
+    console.error(e);
+    alert("Impossible de déplacer cette tâche pour le moment.");
+  }
+}
+
+window.handleTaskDragStart = function (evt, id) {
+  state.draggedTaskId = id;
+  evt.dataTransfer.effectAllowed = 'move';
+  try { evt.dataTransfer.setData('text/plain', id); } catch (e) {}
+  requestAnimationFrame(() => { evt.target.classList.add('dragging'); });
+};
+window.handleTaskDragEnd = function (evt) {
+  evt.target.classList.remove('dragging');
+  state.draggedTaskId = null;
+};
+window.handleColDragOver = function (evt) {
+  evt.preventDefault();
+  evt.currentTarget.dataset.dragover = 'true';
+};
+window.handleColDragLeave = function (evt) {
+  evt.currentTarget.dataset.dragover = 'false';
+};
+window.handleColDrop = function (evt, status) {
+  evt.preventDefault();
+  evt.currentTarget.dataset.dragover = 'false';
+  const id = state.draggedTaskId || (evt.dataTransfer ? evt.dataTransfer.getData('text/plain') : null);
+  if (!id) return;
+  const task = state.tasks.find(t => t.id === id);
+  if (task && task.status !== status) moveTask(id, status);
+};
+
+function initialsOf(name) {
+  const parts = (name || '?').trim().split(/\s+/);
+  return parts.slice(0, 2).map(p => p[0] ? p[0].toUpperCase() : '').join('') || '?';
+}
+
+function taskCardHtml(t) {
+  return `
+    <div class="kanban-card card-hover bg-white border border-edo-line rounded-xl p-3 shadow-sm" draggable="true"
+         ondragstart="handleTaskDragStart(event, '${t.id}')" ondragend="handleTaskDragEnd(event)">
+      <div class="flex items-start justify-between gap-2">
+        <p class="text-sm font-semibold text-black/80 leading-snug">${escapeHtml(t.title || 'Sans titre')}</p>
+        <button onclick="deleteTask('${t.id}')" class="text-black/25 hover:text-black/60 text-xs shrink-0" title="Supprimer">✕</button>
+      </div>
+      <div class="flex items-center gap-2 mt-2.5">
+        <span class="w-6 h-6 rounded-full bg-black text-white flex items-center justify-center text-[10px] font-heading font-bold shrink-0">${escapeHtml(initialsOf(t.assignee))}</span>
+        <span class="text-xs text-black/50 truncate">${escapeHtml(t.assignee || 'Non assigné')}</span>
+      </div>
+    </div>
+  `;
+}
+
+function renderKanban() {
+  TASK_STATUSES.forEach(status => {
+    const container = document.getElementById('col-' + status);
+    const countEl = document.getElementById('count-' + status);
+    if (!container) return;
+    const tasks = state.tasks.filter(t => t.status === status);
+    countEl.textContent = tasks.length;
+    if (tasks.length === 0) {
+      container.innerHTML = `<p class="text-xs text-black/35 text-center py-6">Colonne vide. Le silence avant le buzz.</p>`;
+      return;
+    }
+    container.innerHTML = tasks.map(taskCardHtml).join('');
+  });
+}
+
 /* ============ SWIPE FILE ============ */
 window.handleSwipeSubmit = async function (evt) {
   evt.preventDefault();
@@ -1362,6 +1915,55 @@ function renderSwipeGrid() {
 
   replay('swipe-grid');
 }
+
+/* ============ BRAND CENTER ============ */
+window.copyHex = function (hex, btnEl) {
+  const done = () => {
+    const fb = document.getElementById('copy-feedback');
+    fb.textContent = `Copié : ${hex}`;
+    fb.classList.remove('hidden');
+    clearTimeout(window.__copyFbTimeout);
+    window.__copyFbTimeout = setTimeout(() => fb.classList.add('hidden'), 1800);
+  };
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(hex).then(done).catch(done);
+  } else {
+    done();
+  }
+};
+
+window.copyBio = function (elId, btnEl) {
+  const text = document.getElementById(elId).textContent;
+  const original = btnEl.textContent;
+  const flash = () => { btnEl.textContent = 'Copié !'; setTimeout(() => { btnEl.textContent = original; }, 1500); };
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(text).then(flash).catch(flash);
+  } else {
+    flash();
+  }
+};
+
+window.downloadLogo = function () {
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="400" height="400" viewBox="0 0 400 400">
+  <defs>
+    <linearGradient id="edoGrad" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#FFA200"/>
+      <stop offset="100%" stop-color="#FFC300"/>
+    </linearGradient>
+  </defs>
+  <rect width="400" height="400" rx="48" fill="url(#edoGrad)"/>
+  <text x="200" y="235" font-family="Montserrat, Arial, sans-serif" font-weight="900" font-size="120" fill="#000000" text-anchor="middle">EDO</text>
+</svg>`;
+  const blob = new Blob([svg], { type: 'image/svg+xml' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'edo-logo.svg';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(url), 2000);
+};
 
 /* ============ INIT ============ */
 function init() {
