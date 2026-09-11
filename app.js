@@ -104,7 +104,9 @@ let state = {
   calMonth: todayDate(),
   selectedCalDate: null,
   editoPlatform: 'instagram',
-  editingEditoId: null
+  editingEditoId: null,
+  editoCalMonth: todayDate(),
+  editoSelectedCalDate: null
 };
 
 let lineChart = null;
@@ -528,7 +530,7 @@ window.exportPostsCSV = function () {
   if (state.posts.length === 0) { alert('Aucune donnée à exporter pour le moment.'); return; }
   const headers = ['Date', 'Plateforme', 'Titre', 'Vues', 'Likes', 'Commentaires', 'Metrique_A', 'Metrique_B', 'Interactions', 'Engagement_%'];
   const rows = [...state.posts].sort((a, b) => (a.date || '').localeCompare(b.date || '')).map(p => [
-    p.date || '', platformConfig(p.platform).label, p.title || '', num(p.views), num(p.likes), num(p.comments),
+    formatDateFrShort(p.date), platformConfig(p.platform).label, p.title || '', num(p.views), num(p.likes), num(p.comments),
     num(p.metricA), num(p.metricB), interactions(p), engagementRate(p).toFixed(1)
   ]);
   const csvEscape = (v) => `"${String(v).replace(/"/g, '""')}"`;
@@ -570,6 +572,12 @@ function formatDateFr(iso) {
   if (!iso) return '—';
   const [y, m, d] = iso.split('-').map(Number);
   return d + ' ' + MONTH_NAMES[m - 1] + ' ' + y;
+}
+function formatDateFrShort(iso) {
+  if (!iso) return '—';
+  const [y, m, d] = iso.split('-');
+  if (!y || !m || !d) return iso;
+  return `${d}/${m}/${y}`;
 }
 
 function computeRangeDates() {
@@ -733,7 +741,7 @@ function renderRanking(elId, posts, valueFn, formatFn) {
       <span class="w-6 h-6 rounded-full flex items-center justify-center text-[11px] font-bold shrink-0 ${i === 0 ? 'bg-gradient-to-br from-edo-orange to-edo-yellow text-black' : 'bg-white/8 text-white/50'}">${i + 1}</span>
       <div class="min-w-0 flex-1">
         <p class="text-sm text-white/80 truncate">${escapeHtml(p.title || 'Sans titre')}</p>
-        <p class="text-[11px] text-white/35">${platformConfig(p.platform).label} · ${escapeHtml(p.date || '—')}</p>
+        <p class="text-[11px] text-white/35">${platformConfig(p.platform).label} · ${formatDateFrShort(p.date)}</p>
       </div>
       <span class="text-sm font-heading font-bold shrink-0 text-white">${formatFn(valueFn(p))}</span>
     </li>`).join('');
@@ -751,7 +759,7 @@ function renderDashboardTable(posts) {
 
   tbody.innerHTML = sorted.map(p => `
     <tr>
-      <td class="whitespace-nowrap font-mono text-xs">${escapeHtml(p.date || '—')}</td>
+      <td class="whitespace-nowrap font-mono text-xs">${formatDateFrShort(p.date)}</td>
       <td>${platformBadge(p.platform)}</td>
       <td>${escapeHtml(p.title || 'Sans titre')}</td>
       <td>${formatNumber(p.views)}</td>
@@ -951,27 +959,139 @@ window.toggleEditoDone = async function (id, current) {
 function renderEditoList() {
   const listEl = document.getElementById('edito-list');
   const empty = document.getElementById('edito-empty');
-  if (!listEl) return;
-  const sorted = [...state.editorial].sort((a, b) => (a.date || '').localeCompare(b.date || ''));
+  if (listEl) {
+    const sorted = [...state.editorial].sort((a, b) => (a.date || '').localeCompare(b.date || ''));
 
-  if (sorted.length === 0) { listEl.innerHTML = ''; empty.classList.remove('hidden'); return; }
-  empty.classList.add('hidden');
-
-  listEl.innerHTML = sorted.map(item => `
-    <div class="edito-row p-4 md:p-5 flex flex-col sm:flex-row sm:items-center gap-3" data-done="${!!item.done}">
-      <div class="sm:w-24 shrink-0"><p class="text-xs font-mono text-white/50">${escapeHtml(item.date || '—')}</p></div>
-      <div class="sm:w-28 shrink-0">${platformBadge(item.platform)}</div>
-      <div class="min-w-0 flex-1">
-        <p class="text-sm font-semibold text-white/85 truncate">${escapeHtml(item.subject || 'Sans sujet')}</p>
-        ${item.description ? `<p class="text-xs text-white/35 mt-0.5">${escapeHtml(item.description)}</p>` : ''}
-      </div>
-      <div class="flex items-center gap-2 shrink-0">
-        <button class="edito-done-btn" data-done="${!!item.done}" onclick="toggleEditoDone('${item.id}', ${!!item.done})">${item.done ? '✅ FAIT' : '⏳ À FAIRE'}</button>
-        <button onclick="editEdito('${item.id}')" class="text-edo-orange hover:underline text-xs font-semibold">Modifier</button>
-        <button onclick="deleteEdito('${item.id}')" class="text-white/25 hover:text-white/60 text-xs">✕</button>
-      </div>
-    </div>`).join('');
+    if (sorted.length === 0) {
+      listEl.innerHTML = '';
+      if (empty) empty.classList.remove('hidden');
+    } else {
+      if (empty) empty.classList.add('hidden');
+      listEl.innerHTML = sorted.map(item => `
+        <div class="edito-row p-4 md:p-5 flex flex-col sm:flex-row sm:items-center gap-3" data-done="${!!item.done}">
+          <div class="sm:w-24 shrink-0"><p class="text-xs font-mono text-white/50">${formatDateFrShort(item.date)}</p></div>
+          <div class="sm:w-28 shrink-0">${platformBadge(item.platform)}</div>
+          <div class="min-w-0 flex-1">
+            <p class="text-sm font-semibold text-white/85 truncate">${escapeHtml(item.subject || 'Sans sujet')}</p>
+            ${item.description ? `<p class="text-xs text-white/35 mt-0.5">${escapeHtml(item.description)}</p>` : ''}
+          </div>
+          <div class="flex items-center gap-2 shrink-0">
+            <button class="edito-done-btn" data-done="${!!item.done}" onclick="toggleEditoDone('${item.id}', ${!!item.done})">${item.done ? '✅ FAIT' : '⏳ À FAIRE'}</button>
+            <button onclick="editEdito('${item.id}')" class="text-edo-orange hover:underline text-xs font-semibold">Modifier</button>
+            <button onclick="deleteEdito('${item.id}')" class="text-white/25 hover:text-white/60 text-xs">✕</button>
+          </div>
+        </div>`).join('');
+    }
+  }
+  ensureEditoCalendarMarkup();
+  renderEditoCalendar();
 }
+
+/* ---- Calendrier édito : vue mensuelle pour voir où on en est ---- */
+function ensureEditoCalendarMarkup() {
+  if (document.getElementById('edito-cal-grid')) return;
+  const anchor = document.getElementById('edito-empty');
+  if (!anchor || !anchor.parentElement) return;
+
+  const wrapper = document.createElement('div');
+  wrapper.className = 'mt-10';
+  wrapper.innerHTML = `
+    <p class="font-heading font-semibold text-lg text-white">Vue calendrier <span class="text-white/30 text-sm font-medium">— pour voir où on en est</span></p>
+    <div class="flex items-center justify-between mt-4 max-w-xl">
+      <button onclick="shiftEditoMonth(-1)" class="hud-btn-ghost w-9 h-9 !p-0 flex items-center justify-center"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg></button>
+      <p id="edito-cal-month-label" class="font-heading font-bold text-base text-white"></p>
+      <button onclick="shiftEditoMonth(1)" class="hud-btn-ghost w-9 h-9 !p-0 flex items-center justify-center"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg></button>
+    </div>
+    <div class="flex items-center gap-4 mt-4 text-xs text-white/40 font-mono flex-wrap">
+      <span class="flex items-center gap-1.5"><span class="cal-dot bg-edo-orange"></span>INSTAGRAM</span>
+      <span class="flex items-center gap-1.5"><span class="cal-dot bg-white"></span>LINKEDIN</span>
+      <span class="flex items-center gap-1.5"><span class="cal-dot" style="background:transparent;border:1px solid rgba(255,255,255,.45)"></span>PRÉVU</span>
+      <span class="flex items-center gap-1.5"><span class="cal-dot" style="background:#34d399"></span>FAIT</span>
+    </div>
+    <div id="edito-cal-wrapper" class="fade-target grid grid-cols-7 gap-px mt-3 hud-cal-grid max-w-5xl">
+      <div class="hud-cal-head">Lun</div><div class="hud-cal-head">Mar</div><div class="hud-cal-head">Mer</div><div class="hud-cal-head">Jeu</div><div class="hud-cal-head">Ven</div><div class="hud-cal-head">Sam</div><div class="hud-cal-head">Dim</div>
+      <div id="edito-cal-grid" class="contents"></div>
+    </div>
+    <div id="edito-cal-day-panel" class="hidden anim-fade-up mt-5 hud-panel p-5 max-w-2xl">
+      <p id="edito-cal-day-title" class="font-heading font-semibold text-sm text-white"></p>
+      <div id="edito-cal-day-posts" class="mt-3 space-y-2"></div>
+    </div>`;
+  anchor.parentElement.appendChild(wrapper);
+}
+
+function editoDotHtml(platform, done) {
+  const isInsta = platform === 'instagram';
+  const color = isInsta ? '#FFA200' : '#FFFFFF';
+  if (done) return `<span class="cal-dot" style="background:#34d399"></span>`;
+  return `<span class="cal-dot" style="background:transparent;border:1px solid ${color}"></span>`;
+}
+
+window.shiftEditoMonth = function (delta) {
+  const d = state.editoCalMonth;
+  state.editoCalMonth = new Date(d.getFullYear(), d.getMonth() + delta, 1);
+  state.editoSelectedCalDate = null;
+  const panel = document.getElementById('edito-cal-day-panel');
+  if (panel) panel.classList.add('hidden');
+  renderEditoCalendar();
+};
+
+function renderEditoCalendar() {
+  const label = document.getElementById('edito-cal-month-label');
+  const grid = document.getElementById('edito-cal-grid');
+  if (!label || !grid) return;
+
+  const d = state.editoCalMonth;
+  const year = d.getFullYear();
+  const month = d.getMonth();
+  label.textContent = MONTH_NAMES[month] + ' ' + year;
+
+  const firstDow = (new Date(year, month, 1).getDay() + 6) % 7;
+  const totalDays = daysInMonth(year, month);
+  let html = '';
+
+  for (let i = 0; i < firstDow; i++) html += `<div class="cal-cell" style="opacity:.25"></div>`;
+
+  for (let day = 1; day <= totalDays; day++) {
+    const dateIso = toISO(new Date(year, month, day));
+    const dayItems = state.editorial.filter(e => e.date === dateIso).slice(0, 4);
+    const hasItems = dayItems.length > 0;
+    const selected = state.editoSelectedCalDate === dateIso;
+    const isToday = dateIso === toISO(todayDate());
+    html += `<div class="cal-cell" data-has-post="${hasItems}" data-selected="${selected}" ${hasItems ? `onclick="selectEditoCalDay('${dateIso}')"` : ''}>
+      <span class="cal-day-num" style="${isToday ? 'color:#FFA200;font-weight:700;' : ''}">${day}</span>
+      <div class="flex items-center gap-1 flex-wrap">
+        ${dayItems.map(item => editoDotHtml(item.platform, !!item.done)).join('')}
+      </div>
+    </div>`;
+  }
+
+  grid.innerHTML = html;
+  replay('edito-cal-wrapper');
+}
+
+window.selectEditoCalDay = function (dateIso) {
+  state.editoSelectedCalDate = dateIso;
+  renderEditoCalendar();
+
+  const dayItems = state.editorial.filter(e => e.date === dateIso);
+  const panel = document.getElementById('edito-cal-day-panel');
+  const title = document.getElementById('edito-cal-day-title');
+  const list = document.getElementById('edito-cal-day-posts');
+  if (!panel || !title || !list) return;
+
+  title.textContent = formatDateFr(dateIso) + ' — ' + dayItems.length + ' post' + (dayItems.length > 1 ? 's' : '') + ' planifié' + (dayItems.length > 1 ? 's' : '');
+  list.innerHTML = dayItems.map(item => `
+    <div class="flex items-center justify-between gap-3 px-3 py-2.5 rounded bg-white/[0.03] border border-white/5">
+      <div class="flex items-center gap-2.5 min-w-0">
+        ${editoDotHtml(item.platform, !!item.done)}
+        <p class="text-sm text-white/80 truncate">${escapeHtml(item.subject || 'Sans sujet')}</p>
+      </div>
+      <button class="edito-done-btn shrink-0" data-done="${!!item.done}" onclick="toggleEditoDone('${item.id}', ${!!item.done})">${item.done ? '✅ FAIT' : '⏳ À FAIRE'}</button>
+    </div>`).join('');
+
+  panel.classList.remove('hidden');
+  panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+};
 
 /* ============ BANQUE D'IDÉES ============ */
 document.getElementById('swipe-form') && document.getElementById('swipe-form').addEventListener('submit', handleSwipeSubmit);
