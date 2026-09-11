@@ -1,4 +1,3 @@
-
 /* ==========================================================================
    FIREBASE — À CONFIGURER AVANT DÉPLOIEMENT
    --------------------------------------------------------------------------
@@ -14,12 +13,15 @@
           match /social_posts/{postId}      { allow read, write: if request.auth != null; }
           match /edo_ambassadors/{ambId}     { allow read, write: if request.auth != null; }
           match /edo_tasks/{taskId}          { allow read, write: if request.auth != null; }
+          match /edo_editorial/{editoId}     { allow read, write: if request.auth != null; }
+          match /edo_swipes/{swipeId}        { allow read, write: if request.auth != null; }
           match /app_settings/{settingId}    { allow read, write: if request.auth != null; }
         }
       }
 
    4. Collections utilisées : "social_posts", "edo_ambassadors", "edo_tasks",
-      "app_settings" (créées automatiquement au premier enregistrement).
+      "edo_editorial", "edo_swipes", "app_settings" (créées automatiquement
+      au premier enregistrement).
    ========================================================================== */
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
@@ -63,34 +65,46 @@ if (isConfigured) {
 const postsCol = () => collection(db, 'social_posts');
 const ambassadorsCol = () => collection(db, 'edo_ambassadors');
 const tasksCol = () => collection(db, 'edo_tasks');
+const editorialCol = () => collection(db, 'edo_editorial');
+const swipeCol = () => collection(db, 'edo_swipes');
 const settingsDoc = () => doc(db, 'app_settings', 'counters');
 
 /* ============ CONFIG PLATEFORMES ============ */
 const PLATFORM_CONFIG = {
   instagram: { label: 'Instagram', viewsLabel: 'Vues', metricALabel: 'Enregistrements', metricBLabel: 'Partages', color: '#FFA200' },
-  linkedin:  { label: 'LinkedIn',  viewsLabel: 'Impressions', metricALabel: 'Reposts', metricBLabel: 'Clics', color: '#000000' }
+  linkedin:  { label: 'LinkedIn',  viewsLabel: 'Impressions', metricALabel: 'Reposts', metricBLabel: 'Clics', color: '#FFFFFF' }
 };
 function platformConfig(p) { return PLATFORM_CONFIG[p] || PLATFORM_CONFIG.instagram; }
 
 const BREADCRUMB = {
   dashboard: { title: 'Dashboard RS', sub: "Le pouls de la communication EDO" },
+  calendrier: { title: 'Calendrier suivi', sub: "La fréquence de publication, sans filtre" },
+  edito: { title: 'Calendrier édito', sub: "Anticipe avant que ça ne parte en prod" },
+  idees: { title: "Banque d'idées", sub: "La veille créative de la guilde" },
   ambassadeurs: { title: 'Ambassadeurs', sub: "Le classement de la team" },
   taches: { title: 'Quêtes', sub: "Le kanban de l'équipe" },
   brand: { title: 'Brand Center', sub: "Rester on-brand en toutes circonstances" }
 };
 
 const TASK_STATUSES = ['idees', 'afaire', 'encours', 'valide'];
+const MONTH_NAMES = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'];
+const METRIC_TITLES = { views: 'Évolution des vues', likes: 'Évolution des likes', comments: 'Évolution des commentaires', engagement: "Évolution de l'engagement" };
 
 /* ============ STATE ============ */
 let state = {
-  posts: [], ambassadors: [], tasks: [],
+  posts: [], ambassadors: [], tasks: [], editorial: [], swipes: [],
   activeTab: 'dashboard',
   formPlatform: 'instagram',
   editingId: null,
   range: { type: '7d', start: null, end: null },
   subview: 'global',
+  chartMetric: 'views',
   followers: { linkedin: 0, instagram: 0 },
-  draggedTaskId: null
+  draggedTaskId: null,
+  calMonth: todayDate(),
+  selectedCalDate: null,
+  editoPlatform: 'instagram',
+  editingEditoId: null
 };
 
 let lineChart = null;
@@ -137,7 +151,7 @@ async function handleLogin(evt) {
     errorEl.classList.remove('hidden');
   } finally {
     submitBtn.disabled = false;
-    submitBtn.textContent = 'Se connecter';
+    submitBtn.textContent = 'SE CONNECTER';
   }
 }
 
@@ -275,6 +289,7 @@ function initListeners() {
       renderDashboardTable(getCurrentFilteredPosts());
       renderXpAndStreak();
       if (state.activeTab === 'dashboard') renderDashboard();
+      if (state.activeTab === 'calendrier') renderCalendarSuivi();
     }, (err) => { console.error('Erreur social_posts :', err); setConnectionStatus(false); }));
 
     const ambQuery = query(ambassadorsCol(), orderBy('points', 'desc'));
@@ -288,6 +303,18 @@ function initListeners() {
       state.tasks = snap.docs.map(d => ({ id: d.id, ...d.data() }));
       renderKanban();
     }, (err) => console.error('Erreur edo_tasks :', err)));
+
+    const editoQuery = query(editorialCol(), orderBy('date', 'asc'));
+    unsubscribers.push(onSnapshot(editoQuery, (snap) => {
+      state.editorial = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      renderEditoList();
+    }, (err) => console.error('Erreur edo_editorial :', err)));
+
+    const swipeQuery = query(swipeCol(), orderBy('createdAt', 'desc'));
+    unsubscribers.push(onSnapshot(swipeQuery, (snap) => {
+      state.swipes = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      renderSwipeGrid();
+    }, (err) => console.error('Erreur edo_swipes :', err)));
 
     unsubscribers.push(onSnapshot(settingsDoc(), (snap) => {
       if (snap.exists()) {
@@ -307,8 +334,8 @@ function setConnectionStatus(ok) {
   const dot = document.getElementById('connection-dot');
   const text = document.getElementById('connection-text');
   if (!dot || !text) return;
-  if (ok) { dot.className = 'w-2 h-2 rounded-full bg-emerald-400 glow-pulse'; text.textContent = 'Connecté à Firebase'; }
-  else { dot.className = 'w-2 h-2 rounded-full bg-red-400'; text.textContent = 'Erreur de connexion'; }
+  if (ok) { dot.className = 'w-1.5 h-1.5 rounded-full bg-emerald-400 glow-pulse'; text.textContent = 'CONNECTÉ'; }
+  else { dot.className = 'w-1.5 h-1.5 rounded-full bg-red-400'; text.textContent = 'ERREUR DE CONNEXION'; }
 }
 
 /* ============ XP / NIVEAU / STREAK (cosmétique, basé sur les posts) ============ */
@@ -328,7 +355,7 @@ function renderXpAndStreak() {
   let cursor = todayDate();
   while (dates.has(toISO(cursor))) { streak += 1; cursor = addDays(cursor, -1); }
   const streakLabel = document.getElementById('streak-label');
-  if (streakLabel) streakLabel.textContent = '🔥 ' + streak + ' j';
+  if (streakLabel) streakLabel.textContent = '🔥 ' + streak + 'J';
 }
 
 /* ============ ANIMATION HELPER ============ */
@@ -342,7 +369,8 @@ function replay(elId) {
 /* ============ TABS ============ */
 window.switchTab = function (tab) {
   state.activeTab = tab;
-  ['dashboard', 'ambassadeurs', 'taches', 'brand'].forEach(t => {
+  const tabs = ['dashboard', 'calendrier', 'edito', 'idees', 'ambassadeurs', 'taches', 'brand'];
+  tabs.forEach(t => {
     const s = document.getElementById('view-' + t);
     if (s) s.dataset.visible = (t === tab);
   });
@@ -359,6 +387,9 @@ window.switchTab = function (tab) {
   }
 
   if (tab === 'dashboard') renderDashboard();
+  if (tab === 'calendrier') renderCalendarSuivi();
+  if (tab === 'edito') renderEditoList();
+  if (tab === 'idees') renderSwipeGrid();
   if (tab === 'taches') renderKanban();
   if (tab === 'ambassadeurs') renderAmbassadors();
 };
@@ -377,6 +408,7 @@ window.saveFollowers = async function () {
   try {
     await setDoc(settingsDoc(), { linkedin, instagram }, { merge: true });
     document.getElementById('followers-panel').classList.add('hidden');
+    toast('Compteurs mis à jour — la hype est officielle', '📈');
   } catch (e) { console.error(e); alert("Impossible d'enregistrer les compteurs pour le moment."); }
 };
 
@@ -406,16 +438,16 @@ function renderMetricsGrid(values) {
   const v = values || {};
   const grid = document.getElementById('metrics-grid');
   grid.innerHTML = `
-    <div><label class="block text-xs font-semibold text-black/60 mb-1.5">${cfg.viewsLabel}</label>
-      <input required type="number" min="0" id="f-views" value="${v.views ?? ''}" class="w-full border border-edo-line rounded-lg px-3 py-2.5 text-sm bg-white" /></div>
-    <div><label class="block text-xs font-semibold text-black/60 mb-1.5">Likes</label>
-      <input required type="number" min="0" id="f-likes" value="${v.likes ?? ''}" class="w-full border border-edo-line rounded-lg px-3 py-2.5 text-sm bg-white" /></div>
-    <div><label class="block text-xs font-semibold text-black/60 mb-1.5">Commentaires</label>
-      <input required type="number" min="0" id="f-comments" value="${v.comments ?? ''}" class="w-full border border-edo-line rounded-lg px-3 py-2.5 text-sm bg-white" /></div>
-    <div><label class="block text-xs font-semibold text-black/60 mb-1.5">${cfg.metricALabel}</label>
-      <input required type="number" min="0" id="f-metricA" value="${v.metricA ?? ''}" class="w-full border border-edo-line rounded-lg px-3 py-2.5 text-sm bg-white" /></div>
-    <div><label class="block text-xs font-semibold text-black/60 mb-1.5">${cfg.metricBLabel}</label>
-      <input required type="number" min="0" id="f-metricB" value="${v.metricB ?? ''}" class="w-full border border-edo-line rounded-lg px-3 py-2.5 text-sm bg-white" /></div>
+    <div><label class="hud-label">${cfg.viewsLabel}</label>
+      <input required type="number" min="0" id="f-views" value="${v.views ?? ''}" class="hud-input w-full" /></div>
+    <div><label class="hud-label">Likes</label>
+      <input required type="number" min="0" id="f-likes" value="${v.likes ?? ''}" class="hud-input w-full" /></div>
+    <div><label class="hud-label">Commentaires</label>
+      <input required type="number" min="0" id="f-comments" value="${v.comments ?? ''}" class="hud-input w-full" /></div>
+    <div><label class="hud-label">${cfg.metricALabel}</label>
+      <input required type="number" min="0" id="f-metricA" value="${v.metricA ?? ''}" class="hud-input w-full" /></div>
+    <div><label class="hud-label">${cfg.metricBLabel}</label>
+      <input required type="number" min="0" id="f-metricB" value="${v.metricB ?? ''}" class="hud-input w-full" /></div>
   `;
 }
 
@@ -466,7 +498,7 @@ window.editPost = function (id) {
   state.editingId = id;
   document.getElementById('post-form').classList.remove('hidden');
   document.getElementById('form-title').textContent = 'Modifier une publication';
-  document.getElementById('submit-btn').textContent = 'Enregistrer les modifications';
+  document.getElementById('submit-btn').textContent = 'ENREGISTRER LES MODIFICATIONS';
   document.getElementById('cancel-edit-btn').classList.remove('hidden');
   document.getElementById('f-date').value = post.date || '';
   document.getElementById('f-title').value = post.title || '';
@@ -478,7 +510,7 @@ window.editPost = function (id) {
 window.cancelEdit = function () {
   state.editingId = null;
   document.getElementById('form-title').textContent = 'Ajouter une publication';
-  document.getElementById('submit-btn').textContent = 'Ajouter les performances';
+  document.getElementById('submit-btn').textContent = 'AJOUTER LES PERFORMANCES';
   document.getElementById('cancel-edit-btn').classList.add('hidden');
   document.getElementById('post-form').reset();
   document.getElementById('f-date').value = '';
@@ -522,15 +554,23 @@ function formatNumber(n) { return new Intl.NumberFormat('fr-FR').format(Math.rou
 function formatPercent(n) { return (n >= 0 ? '+' : '') + n.toFixed(1) + ' %'; }
 function escapeHtml(str) { const d = document.createElement('div'); d.textContent = str ?? ''; return d.innerHTML; }
 function platformBadge(platform) {
-  const cfg = platformConfig(platform);
   const isInsta = platform === 'instagram';
-  return `<span class="inline-flex items-center gap-1.5 text-xs font-semibold px-2 py-1 rounded-full ${isInsta ? 'bg-edo-orange/15 text-edo-orange' : 'bg-black/5 text-black'}">${cfg.label}</span>`;
+  const cls = isInsta
+    ? 'bg-edo-orange/15 text-edo-orange border border-edo-orange/25'
+    : 'bg-white/10 text-white border border-white/15';
+  return `<span class="inline-flex items-center gap-1.5 text-[10px] font-bold font-mono uppercase tracking-wide px-2 py-1 rounded ${cls}">${platformConfig(platform).label}</span>`;
 }
 
-/* ============ DATE RANGE ============ */
+/* ============ DATE HELPERS ============ */
 function toISO(d) { return d.toISOString().slice(0, 10); }
 function addDays(d, days) { const nd = new Date(d); nd.setDate(nd.getDate() + days); return nd; }
 function todayDate() { const now = new Date(); return new Date(now.getFullYear(), now.getMonth(), now.getDate()); }
+function daysInMonth(year, month) { return new Date(year, month + 1, 0).getDate(); }
+function formatDateFr(iso) {
+  if (!iso) return '—';
+  const [y, m, d] = iso.split('-').map(Number);
+  return d + ' ' + MONTH_NAMES[m - 1] + ' ' + y;
+}
 
 function computeRangeDates() {
   const today = todayDate();
@@ -586,16 +626,16 @@ function computeKPIs(posts) {
   return { totalViews, totalLikes, totalComments, avgEngagement };
 }
 function evolutionLabel(current, previous) {
-  if (previous === 0) return current === 0 ? { text: 'Stable vs préc.', cls: 'text-black/40' } : { text: 'Nouveau vs préc.', cls: 'text-edo-orange' };
+  if (previous === 0) return current === 0 ? { text: 'Stable vs préc.', cls: 'text-white/30' } : { text: 'Nouveau vs préc.', cls: 'text-edo-orange' };
   const pct = ((current - previous) / previous) * 100;
-  return { text: formatPercent(pct) + ' vs préc.', cls: pct >= 0 ? 'text-emerald-600' : 'text-red-500' };
+  return { text: formatPercent(pct) + ' vs préc.', cls: pct >= 0 ? 'text-emerald-400' : 'text-red-400' };
 }
 function setEvo(elId, current, previous) {
   const evo = evolutionLabel(current, previous);
   const el = document.getElementById(elId);
   if (!el) return;
   el.textContent = evo.text;
-  el.className = 'text-xs font-semibold mt-2 ' + evo.cls;
+  el.className = 'hud-kpi-evo ' + evo.cls;
 }
 
 function renderKPIs(range, prevRange) {
@@ -621,9 +661,28 @@ function renderKPIs(range, prevRange) {
 }
 
 /* ============ CHART ============ */
+window.setChartMetric = function (metric) {
+  state.chartMetric = metric;
+  document.querySelectorAll('.metric-btn').forEach(btn => { btn.dataset.active = (btn.dataset.metric === metric); });
+  renderDashboard();
+};
+
+function metricDailyValue(posts, metric) {
+  if (metric === 'engagement') {
+    const totalViews = posts.reduce((s, p) => s + num(p.views), 0);
+    const totalInter = posts.reduce((s, p) => s + interactions(p), 0);
+    return totalViews > 0 ? (totalInter / totalViews) * 100 : 0;
+  }
+  return posts.reduce((s, p) => s + num(p[metric]), 0);
+}
+
 function renderLineChart(currentPosts) {
   const canvas = document.getElementById('chart-line');
   if (!canvas) return;
+  const metric = state.chartMetric || 'views';
+  const titleEl = document.getElementById('chart-title');
+  if (titleEl) titleEl.textContent = METRIC_TITLES[metric] || METRIC_TITLES.views;
+
   const dates = [...new Set(currentPosts.map(p => p.date).filter(Boolean))].sort();
   const ctx = canvas.getContext('2d');
   if (lineChart) { lineChart.destroy(); lineChart = null; }
@@ -632,12 +691,18 @@ function renderLineChart(currentPosts) {
   let datasets;
   if (state.subview === 'global') {
     datasets = [
-      { label: 'Instagram', data: dates.map(d => currentPosts.filter(p => p.date === d && p.platform === 'instagram').reduce((s, p) => s + num(p.views), 0)), borderColor: '#FFA200', backgroundColor: 'rgba(255,162,0,0.12)', fill: true, tension: 0.3, pointRadius: 3 },
-      { label: 'LinkedIn', data: dates.map(d => currentPosts.filter(p => p.date === d && p.platform === 'linkedin').reduce((s, p) => s + num(p.views), 0)), borderColor: '#000000', backgroundColor: 'rgba(0,0,0,0.05)', fill: true, tension: 0.3, pointRadius: 3 }
+      { label: 'Instagram', data: dates.map(d => metricDailyValue(currentPosts.filter(p => p.date === d && p.platform === 'instagram'), metric)), borderColor: '#FFA200', backgroundColor: 'rgba(255,162,0,0.14)', fill: true, tension: 0.3, pointRadius: 3, pointBackgroundColor: '#FFA200' },
+      { label: 'LinkedIn', data: dates.map(d => metricDailyValue(currentPosts.filter(p => p.date === d && p.platform === 'linkedin'), metric)), borderColor: '#FFFFFF', backgroundColor: 'rgba(255,255,255,0.08)', fill: true, tension: 0.3, pointRadius: 3, pointBackgroundColor: '#FFFFFF' }
     ];
   } else {
-    const cfg = platformConfig(state.subview);
-    datasets = [{ label: cfg.label, data: dates.map(d => currentPosts.filter(p => p.date === d).reduce((s, p) => s + num(p.views), 0)), borderColor: cfg.color, backgroundColor: cfg.color === '#000000' ? 'rgba(0,0,0,0.05)' : 'rgba(255,162,0,0.12)', fill: true, tension: 0.3, pointRadius: 3 }];
+    const isInsta = state.subview === 'instagram';
+    datasets = [{
+      label: platformConfig(state.subview).label,
+      data: dates.map(d => metricDailyValue(currentPosts.filter(p => p.date === d), metric)),
+      borderColor: isInsta ? '#FFA200' : '#FFFFFF',
+      backgroundColor: isInsta ? 'rgba(255,162,0,0.14)' : 'rgba(255,255,255,0.08)',
+      fill: true, tension: 0.3, pointRadius: 3, pointBackgroundColor: isInsta ? '#FFA200' : '#FFFFFF'
+    }];
   }
 
   try {
@@ -646,8 +711,11 @@ function renderLineChart(currentPosts) {
       options: {
         responsive: true, maintainAspectRatio: false,
         interaction: { mode: 'index', intersect: false },
-        plugins: { legend: { position: 'bottom', labels: { usePointStyle: true, boxWidth: 8, font: { family: 'Inter', size: 11 } } } },
-        scales: { x: { grid: { display: false }, ticks: { font: { size: 10 } } }, y: { grid: { color: '#F0EFEC' }, ticks: { font: { size: 10 } } } }
+        plugins: { legend: { position: 'bottom', labels: { usePointStyle: true, boxWidth: 8, color: 'rgba(255,255,255,0.6)', font: { family: 'Inter', size: 11 } } } },
+        scales: {
+          x: { grid: { display: false }, ticks: { color: 'rgba(255,255,255,0.35)', font: { size: 10 } } },
+          y: { grid: { color: 'rgba(255,255,255,0.06)' }, ticks: { color: 'rgba(255,255,255,0.35)', font: { size: 10 } } }
+        }
       }
     });
   } catch (e) { console.error('Erreur graphique :', e); }
@@ -659,15 +727,15 @@ function renderRanking(elId, posts, valueFn, formatFn) {
   const el = document.getElementById(elId);
   if (!el) return;
   const top3 = [...posts].sort((a, b) => valueFn(b) - valueFn(a)).slice(0, 3);
-  if (top3.length === 0) { el.innerHTML = '<p class="text-xs text-black/35">Pas assez de données sur cette période.</p>'; return; }
+  if (top3.length === 0) { el.innerHTML = '<p class="text-xs text-white/30">Pas assez de données ici — patience, jeune padawan.</p>'; return; }
   el.innerHTML = top3.map((p, i) => `
     <li class="flex items-center gap-3">
-      <span class="w-6 h-6 rounded-full flex items-center justify-center text-[11px] font-bold shrink-0 ${i === 0 ? 'kpi-accent text-black' : 'bg-black/5 text-black/60'}">${i + 1}</span>
+      <span class="w-6 h-6 rounded-full flex items-center justify-center text-[11px] font-bold shrink-0 ${i === 0 ? 'bg-gradient-to-br from-edo-orange to-edo-yellow text-black' : 'bg-white/8 text-white/50'}">${i + 1}</span>
       <div class="min-w-0 flex-1">
-        <p class="text-sm text-black/80 truncate">${escapeHtml(p.title || 'Sans titre')}</p>
-        <p class="text-[11px] text-black/40">${platformConfig(p.platform).label} · ${escapeHtml(p.date || '—')}</p>
+        <p class="text-sm text-white/80 truncate">${escapeHtml(p.title || 'Sans titre')}</p>
+        <p class="text-[11px] text-white/35">${platformConfig(p.platform).label} · ${escapeHtml(p.date || '—')}</p>
       </div>
-      <span class="text-sm font-heading font-bold shrink-0">${formatFn(valueFn(p))}</span>
+      <span class="text-sm font-heading font-bold shrink-0 text-white">${formatFn(valueFn(p))}</span>
     </li>`).join('');
 }
 
@@ -682,16 +750,16 @@ function renderDashboardTable(posts) {
   empty.classList.add('hidden');
 
   tbody.innerHTML = sorted.map(p => `
-    <tr class="border-b border-edo-line last:border-0">
-      <td class="text-black/70 whitespace-nowrap">${escapeHtml(p.date || '—')}</td>
+    <tr>
+      <td class="whitespace-nowrap font-mono text-xs">${escapeHtml(p.date || '—')}</td>
       <td>${platformBadge(p.platform)}</td>
-      <td class="text-black/80">${escapeHtml(p.title || 'Sans titre')}</td>
-      <td class="text-black/70">${formatNumber(p.views)}</td>
-      <td class="text-black/70">${formatNumber(interactions(p))}</td>
-      <td class="text-black/70 font-semibold">${engagementRate(p).toFixed(1)} %</td>
+      <td>${escapeHtml(p.title || 'Sans titre')}</td>
+      <td>${formatNumber(p.views)}</td>
+      <td>${formatNumber(interactions(p))}</td>
+      <td class="font-semibold text-edo-orange">${engagementRate(p).toFixed(1)} %</td>
       <td class="whitespace-nowrap">
         <button onclick="editPost('${p.id}')" class="text-edo-orange hover:underline text-xs font-semibold mr-3">Modifier</button>
-        <button onclick="deletePost('${p.id}')" class="text-black/30 hover:text-black/70 text-xs">Supprimer</button>
+        <button onclick="deletePost('${p.id}')" class="text-white/30 hover:text-white/70 text-xs">Supprimer</button>
       </td>
     </tr>`).join('');
   replay('dashboard-table-wrapper');
@@ -717,6 +785,243 @@ function renderDashboard() {
   replay('ranking-grid');
 }
 
+/* ============ CALENDRIER SUIVI ============ */
+window.shiftMonth = function (delta) {
+  const d = state.calMonth;
+  state.calMonth = new Date(d.getFullYear(), d.getMonth() + delta, 1);
+  state.selectedCalDate = null;
+  const panel = document.getElementById('cal-day-panel');
+  if (panel) panel.classList.add('hidden');
+  renderCalendarSuivi();
+};
+
+function platformDotHtml(platform) {
+  const isInsta = platform === 'instagram';
+  return `<span class="cal-dot ${isInsta ? 'bg-edo-orange' : 'bg-white'} shrink-0"></span>`;
+}
+
+function renderCalendarSuivi() {
+  const label = document.getElementById('cal-month-label');
+  const grid = document.getElementById('cal-grid');
+  if (!label || !grid) return;
+
+  const d = state.calMonth;
+  const year = d.getFullYear();
+  const month = d.getMonth();
+  label.textContent = MONTH_NAMES[month] + ' ' + year;
+
+  const firstDow = (new Date(year, month, 1).getDay() + 6) % 7;
+  const totalDays = daysInMonth(year, month);
+  let html = '';
+
+  for (let i = 0; i < firstDow; i++) html += `<div class="cal-cell" style="opacity:.25"></div>`;
+
+  for (let day = 1; day <= totalDays; day++) {
+    const dateIso = toISO(new Date(year, month, day));
+    const dayPosts = state.posts.filter(p => p.date === dateIso);
+    const hasIG = dayPosts.some(p => p.platform === 'instagram');
+    const hasLI = dayPosts.some(p => p.platform === 'linkedin');
+    const hasPost = dayPosts.length > 0;
+    const selected = state.selectedCalDate === dateIso;
+    const isToday = dateIso === toISO(todayDate());
+    html += `<div class="cal-cell" data-has-post="${hasPost}" data-selected="${selected}" ${hasPost ? `onclick="selectCalDay('${dateIso}')"` : ''}>
+      <span class="cal-day-num" style="${isToday ? 'color:#FFA200;font-weight:700;' : ''}">${day}</span>
+      <div class="flex items-center gap-1">
+        ${hasIG ? platformDotHtml('instagram') : ''}
+        ${hasLI ? platformDotHtml('linkedin') : ''}
+      </div>
+    </div>`;
+  }
+
+  grid.innerHTML = html;
+  replay('cal-wrapper');
+}
+
+window.selectCalDay = function (dateIso) {
+  state.selectedCalDate = dateIso;
+  renderCalendarSuivi();
+
+  const dayPosts = state.posts.filter(p => p.date === dateIso);
+  const panel = document.getElementById('cal-day-panel');
+  const title = document.getElementById('cal-day-title');
+  const list = document.getElementById('cal-day-posts');
+  if (!panel || !title || !list) return;
+
+  title.textContent = formatDateFr(dateIso) + ' — ' + dayPosts.length + ' publication' + (dayPosts.length > 1 ? 's' : '');
+  list.innerHTML = dayPosts.map(p => `
+    <div class="flex items-center justify-between gap-3 px-3 py-2.5 rounded bg-white/[0.03] border border-white/5">
+      <div class="flex items-center gap-2.5 min-w-0">
+        ${platformDotHtml(p.platform)}
+        <p class="text-sm text-white/80 truncate">${escapeHtml(p.title || 'Sans titre')}</p>
+      </div>
+      <p class="text-xs text-white/40 font-mono shrink-0">${formatNumber(p.views)} vues</p>
+    </div>`).join('');
+
+  panel.classList.remove('hidden');
+  panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+};
+
+/* ============ CALENDRIER ÉDITO ============ */
+window.toggleEditoForm = function () {
+  const form = document.getElementById('edito-form');
+  form.classList.toggle('hidden');
+  if (!form.classList.contains('hidden')) window.scrollTo({ top: form.offsetTop - 90, behavior: 'smooth' });
+};
+
+window.setEditoPlatform = function (platform) {
+  state.editoPlatform = platform;
+  document.getElementById('e-btn-instagram').dataset.active = (platform === 'instagram');
+  document.getElementById('e-btn-linkedin').dataset.active = (platform === 'linkedin');
+};
+
+document.getElementById('edito-form') && document.getElementById('edito-form').addEventListener('submit', handleEditoSubmit);
+
+async function handleEditoSubmit(evt) {
+  evt.preventDefault();
+  if (!isConfigured || !db) { alert("Configure Firebase avant de planifier un post."); return; }
+
+  const payload = {
+    date: document.getElementById('e-date').value,
+    platform: state.editoPlatform,
+    subject: (document.getElementById('e-subject').value || '').trim(),
+    description: (document.getElementById('e-description').value || '').trim()
+  };
+
+  const btn = document.getElementById('edito-submit-btn');
+  btn.disabled = true;
+
+  try {
+    if (state.editingEditoId) {
+      await updateDoc(doc(db, 'edo_editorial', state.editingEditoId), payload);
+      toast('Ligne édito mise à jour', '📝');
+      cancelEditoEdit();
+    } else {
+      await addDoc(editorialCol(), { ...payload, done: false, createdAt: serverTimestamp() });
+      toast("Post planifié — le calendrier n'a plus de secrets", '🗓️');
+      evt.target.reset();
+      document.getElementById('e-date').value = '';
+      setEditoPlatform(state.editoPlatform);
+      document.getElementById('edito-form').classList.add('hidden');
+    }
+  } catch (e) {
+    console.error(e);
+    alert("Impossible d'enregistrer cette ligne édito pour le moment.");
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+window.editEdito = function (id) {
+  const item = state.editorial.find(e => e.id === id);
+  if (!item) return;
+  state.editingEditoId = id;
+  document.getElementById('edito-form').classList.remove('hidden');
+  document.getElementById('e-date').value = item.date || '';
+  document.getElementById('e-subject').value = item.subject || '';
+  document.getElementById('e-description').value = item.description || '';
+  setEditoPlatform(item.platform || 'instagram');
+  document.getElementById('edito-submit-btn').textContent = 'ENREGISTRER LES MODIFICATIONS';
+  document.getElementById('edito-cancel-btn').classList.remove('hidden');
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+};
+
+window.cancelEditoEdit = function () {
+  state.editingEditoId = null;
+  document.getElementById('edito-form').reset();
+  document.getElementById('e-date').value = '';
+  setEditoPlatform('instagram');
+  document.getElementById('edito-submit-btn').textContent = 'PLANIFIER';
+  document.getElementById('edito-cancel-btn').classList.add('hidden');
+};
+
+window.deleteEdito = async function (id) {
+  if (!confirm('Supprimer cette ligne du planning édito ?')) return;
+  try { await deleteDoc(doc(db, 'edo_editorial', id)); toast('Ligne édito supprimée', '🗑️'); }
+  catch (e) { console.error(e); alert('Impossible de supprimer cette ligne pour le moment.'); }
+};
+
+window.toggleEditoDone = async function (id, current) {
+  if (!isConfigured || !db) return;
+  try {
+    await updateDoc(doc(db, 'edo_editorial', id), { done: !current });
+    toast(!current ? 'Publié ! Le stagiaire peut souffler 😮\u200d💨' : 'Remis en attente — retour en coulisses', !current ? '✅' : '↩️');
+  } catch (e) { console.error(e); alert('Impossible de mettre à jour ce statut pour le moment.'); }
+};
+
+function renderEditoList() {
+  const listEl = document.getElementById('edito-list');
+  const empty = document.getElementById('edito-empty');
+  if (!listEl) return;
+  const sorted = [...state.editorial].sort((a, b) => (a.date || '').localeCompare(b.date || ''));
+
+  if (sorted.length === 0) { listEl.innerHTML = ''; empty.classList.remove('hidden'); return; }
+  empty.classList.add('hidden');
+
+  listEl.innerHTML = sorted.map(item => `
+    <div class="edito-row p-4 md:p-5 flex flex-col sm:flex-row sm:items-center gap-3" data-done="${!!item.done}">
+      <div class="sm:w-24 shrink-0"><p class="text-xs font-mono text-white/50">${escapeHtml(item.date || '—')}</p></div>
+      <div class="sm:w-28 shrink-0">${platformBadge(item.platform)}</div>
+      <div class="min-w-0 flex-1">
+        <p class="text-sm font-semibold text-white/85 truncate">${escapeHtml(item.subject || 'Sans sujet')}</p>
+        ${item.description ? `<p class="text-xs text-white/35 mt-0.5">${escapeHtml(item.description)}</p>` : ''}
+      </div>
+      <div class="flex items-center gap-2 shrink-0">
+        <button class="edito-done-btn" data-done="${!!item.done}" onclick="toggleEditoDone('${item.id}', ${!!item.done})">${item.done ? '✅ FAIT' : '⏳ À FAIRE'}</button>
+        <button onclick="editEdito('${item.id}')" class="text-edo-orange hover:underline text-xs font-semibold">Modifier</button>
+        <button onclick="deleteEdito('${item.id}')" class="text-white/25 hover:text-white/60 text-xs">✕</button>
+      </div>
+    </div>`).join('');
+}
+
+/* ============ BANQUE D'IDÉES ============ */
+document.getElementById('swipe-form') && document.getElementById('swipe-form').addEventListener('submit', handleSwipeSubmit);
+
+async function handleSwipeSubmit(evt) {
+  evt.preventDefault();
+  if (!isConfigured || !db) { alert("Configure Firebase avant d'ajouter une idée."); return; }
+
+  const payload = {
+    url: (document.getElementById('f-swipe-url').value || '').trim(),
+    note: (document.getElementById('f-swipe-note').value || '').trim()
+  };
+
+  try {
+    await addDoc(swipeCol(), { ...payload, createdAt: serverTimestamp() });
+    evt.target.reset();
+    toast("Idée ajoutée à la veille — merci l'algorithme", '💡');
+  } catch (e) { console.error(e); alert("Impossible d'ajouter cette idée pour le moment."); }
+}
+
+window.deleteSwipe = async function (id) {
+  if (!confirm('Retirer cette idée du mood board ?')) return;
+  try { await deleteDoc(doc(db, 'edo_swipes', id)); }
+  catch (e) { console.error(e); alert('Impossible de supprimer cette idée pour le moment.'); }
+};
+
+function domainOf(url) {
+  try { return new URL(url).hostname.replace('www.', ''); }
+  catch (e) { return url || ''; }
+}
+
+function renderSwipeGrid() {
+  const grid = document.getElementById('swipe-grid');
+  const empty = document.getElementById('swipe-empty');
+  if (!grid) return;
+  const sorted = [...state.swipes].sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
+
+  if (sorted.length === 0) { grid.innerHTML = ''; empty.classList.remove('hidden'); return; }
+  empty.classList.add('hidden');
+
+  grid.innerHTML = sorted.map(s => `
+    <div class="hud-panel p-4 md:p-5">
+      <div class="flex items-start justify-between gap-2">
+        <a href="${escapeHtml(s.url || '#')}" target="_blank" rel="noopener" class="text-xs font-mono text-edo-orange hover:underline truncate">${escapeHtml(domainOf(s.url))} ↗</a>
+        <button onclick="deleteSwipe('${s.id}')" class="text-white/25 hover:text-white/60 text-xs shrink-0" title="Supprimer">✕</button>
+      </div>
+      <p class="text-sm text-white/75 mt-2.5 leading-relaxed">${escapeHtml(s.note || '')}</p>
+    </div>`).join('');
+}
+
 /* ============ AMBASSADEURS ============ */
 document.getElementById('ambassador-form') && document.getElementById('ambassador-form').addEventListener('submit', handleAmbassadorSubmit);
 
@@ -735,7 +1040,7 @@ async function handleAmbassadorSubmit(evt) {
   try {
     await addDoc(ambassadorsCol(), { ...payload, createdAt: serverTimestamp() });
     evt.target.reset();
-    toast('Nouvel ambassadeur recruté', '🎉');
+    toast('Nouvel ambassadeur recruté — bienvenue dans la guilde', '🎉');
   } catch (e) { console.error(e); alert("Impossible d'ajouter cet ambassadeur pour le moment."); }
 }
 
@@ -743,7 +1048,7 @@ window.addAmbassadorPoints = async function (id, amount) {
   if (!isConfigured || !db) return;
   try {
     await updateDoc(doc(db, 'edo_ambassadors', id), { points: increment(amount) });
-    toast('+' + amount + ' points', '⭐');
+    toast(amount >= 25 ? '🔥 +25 points — légende en approche' : '+' + amount + ' points', amount >= 25 ? '🔥' : '⭐');
   } catch (e) { console.error(e); alert("Impossible d'ajouter les points pour le moment."); }
 };
 
@@ -764,30 +1069,46 @@ function renderAmbassadors() {
   const list = document.getElementById('ambassador-list');
   const empty = document.getElementById('ambassador-empty');
   if (!list) return;
-  const sorted = [...state.ambassadors].sort((a, b) => num(b.points) - num(a.points));
 
-  if (sorted.length === 0) { list.innerHTML = ''; empty.classList.remove('hidden'); return; }
+  const fullSorted = [...state.ambassadors].sort((a, b) => num(b.points) - num(a.points));
+  const searchInput = document.getElementById('amb-search');
+  const q = (searchInput ? searchInput.value : '').trim().toLowerCase();
+  const visible = q
+    ? fullSorted.filter(a => `${a.firstname || ''} ${a.lastname || ''}`.toLowerCase().includes(q))
+    : fullSorted;
+
+  if (visible.length === 0) {
+    list.innerHTML = '';
+    empty.classList.remove('hidden');
+    if (q && state.ambassadors.length > 0) {
+      empty.innerHTML = `<p class="text-sm font-semibold text-white/50">Aucun·e ambassadeur·rice ne répond à "${escapeHtml(q)}".</p><p class="text-xs text-white/25 mt-1">Vérifie l'orthographe, ou recrute-en un·e nouveau·elle.</p>`;
+    } else {
+      empty.innerHTML = `<p class="text-sm font-semibold text-white/50">Le podium est vide.</p><p class="text-xs text-white/25 mt-1">Recrute ton premier ambassadeur ci-dessus.</p>`;
+    }
+    return;
+  }
   empty.classList.add('hidden');
 
-  list.innerHTML = sorted.map((a, i) => {
-    const rankClass = i === 0 ? 'amb-rank-1' : i === 1 ? 'amb-rank-2' : i === 2 ? 'amb-rank-3' : '';
+  list.innerHTML = visible.map(a => {
+    const rank = fullSorted.findIndex(x => x.id === a.id);
+    const rankClass = rank === 0 ? 'amb-rank-1' : rank === 1 ? 'amb-rank-2' : rank === 2 ? 'amb-rank-3' : '';
     return `
-    <div class="amb-row bg-white border border-edo-line rounded-2xl px-4 sm:px-5 py-4 shadow-sm flex flex-wrap items-center gap-4 ${rankClass}">
-      <span class="font-heading font-black text-xl w-10 text-center shrink-0">${medalFor(i)}</span>
-      <div class="w-10 h-10 rounded-full bg-black text-white flex items-center justify-center font-heading font-bold text-xs shrink-0">${escapeHtml(((a.firstname || '?')[0] || '') + ((a.lastname || '')[0] || ''))}</div>
+    <div class="amb-row px-4 sm:px-5 py-4 flex flex-wrap items-center gap-4 ${rankClass}">
+      <span class="font-heading font-black text-xl w-10 text-center shrink-0">${medalFor(rank)}</span>
+      <div class="w-10 h-10 rounded-full bg-gradient-to-br from-edo-orange to-edo-yellow text-black flex items-center justify-center font-heading font-bold text-xs shrink-0">${escapeHtml(((a.firstname || '?')[0] || '') + ((a.lastname || '')[0] || ''))}</div>
       <div class="min-w-0 flex-1">
-        <p class="text-sm font-semibold text-black/85 truncate">${escapeHtml(a.firstname || '')} ${escapeHtml(a.lastname || '')}</p>
-        <p class="text-[11px] text-black/40 truncate">${escapeHtml(a.email || '')}${a.phone ? ' · ' + escapeHtml(a.phone) : ''}</p>
+        <p class="text-sm font-semibold text-white/85 truncate">${escapeHtml(a.firstname || '')} ${escapeHtml(a.lastname || '')}</p>
+        <p class="text-[11px] text-white/35 truncate">${escapeHtml(a.email || '')}${a.phone ? ' · ' + escapeHtml(a.phone) : ''}</p>
       </div>
       <div class="flex items-center gap-2">
         <span class="font-heading font-extrabold text-lg text-edo-orange">${formatNumber(a.points)}</span>
-        <span class="text-[11px] text-black/40">pts</span>
+        <span class="text-[11px] text-white/35">pts</span>
       </div>
       <div class="flex items-center gap-1.5 shrink-0">
-        <button onclick="addAmbassadorPoints('${a.id}', 5)" class="px-2.5 py-1.5 rounded-lg text-xs font-bold border border-edo-line hover:bg-edo-paper">+5</button>
-        <button onclick="addAmbassadorPoints('${a.id}', 10)" class="px-2.5 py-1.5 rounded-lg text-xs font-bold border border-edo-line hover:bg-edo-paper">+10</button>
-        <button onclick="addAmbassadorPoints('${a.id}', 25)" class="px-2.5 py-1.5 rounded-lg text-xs font-bold text-black kpi-accent">+25</button>
-        <button onclick="deleteAmbassador('${a.id}')" class="px-2 py-1.5 rounded-lg text-xs text-black/30 hover:text-black/70" title="Retirer">✕</button>
+        <button onclick="addAmbassadorPoints('${a.id}', 5)" class="px-2.5 py-1.5 rounded text-xs font-bold border border-white/15 text-white/70 hover:border-edo-orange/50 hover:text-edo-orange">+5</button>
+        <button onclick="addAmbassadorPoints('${a.id}', 10)" class="px-2.5 py-1.5 rounded text-xs font-bold border border-white/15 text-white/70 hover:border-edo-orange/50 hover:text-edo-orange">+10</button>
+        <button onclick="addAmbassadorPoints('${a.id}', 25)" class="px-2.5 py-1.5 rounded text-xs font-bold bg-gradient-to-br from-edo-orange to-edo-yellow text-black">+25</button>
+        <button onclick="deleteAmbassador('${a.id}')" class="px-2 py-1.5 rounded text-xs text-white/30 hover:text-white/70" title="Retirer">✕</button>
       </div>
     </div>`;
   }).join('');
@@ -848,15 +1169,15 @@ function initialsOf(name) {
 
 function taskCardHtml(t) {
   return `
-    <div class="kanban-card card-hover bg-white border border-edo-line rounded-xl p-3 shadow-sm md:transition-all md:duration-300" draggable="true"
+    <div class="kanban-card" draggable="true"
          ondragstart="handleTaskDragStart(event, '${t.id}')" ondragend="handleTaskDragEnd(event)">
       <div class="flex items-start justify-between gap-2">
-        <p class="text-sm font-semibold text-black/80 leading-snug">${escapeHtml(t.title || 'Sans titre')}</p>
-        <button onclick="deleteTask('${t.id}')" class="text-black/25 hover:text-black/60 text-xs shrink-0" title="Supprimer">✕</button>
+        <p class="text-sm font-semibold text-white/85 leading-snug">${escapeHtml(t.title || 'Sans titre')}</p>
+        <button onclick="deleteTask('${t.id}')" class="text-white/25 hover:text-white/60 text-xs shrink-0" title="Supprimer">✕</button>
       </div>
       <div class="flex items-center gap-2 mt-2.5">
-        <span class="w-6 h-6 rounded-full bg-black text-white flex items-center justify-center text-[10px] font-heading font-bold shrink-0">${escapeHtml(initialsOf(t.assignee))}</span>
-        <span class="text-xs text-black/50 truncate">${escapeHtml(t.assignee || 'Non assigné')}</span>
+        <span class="w-6 h-6 rounded-full bg-gradient-to-br from-edo-orange to-edo-yellow text-black flex items-center justify-center text-[10px] font-heading font-bold shrink-0">${escapeHtml(initialsOf(t.assignee))}</span>
+        <span class="text-xs text-white/45 truncate">${escapeHtml(t.assignee || 'Non assigné')}</span>
       </div>
     </div>`;
 }
@@ -869,7 +1190,7 @@ function renderKanban() {
     const tasks = state.tasks.filter(t => t.status === status);
     countEl.textContent = tasks.length;
     container.innerHTML = tasks.length === 0
-      ? `<p class="text-xs text-black/35 text-center py-6">Colonne vide. Le silence avant le buzz.</p>`
+      ? `<p class="text-xs text-white/30 text-center py-6">Colonne vide. Le silence avant le buzz.</p>`
       : tasks.map(taskCardHtml).join('');
   });
 }
@@ -887,5 +1208,8 @@ function init() {
   if (dateField) dateField.value = toISO(todayDate());
   renderMetricsGrid();
   renderFollowers();
+  renderCalendarSuivi();
+  renderEditoList();
+  renderSwipeGrid();
 }
 init();
