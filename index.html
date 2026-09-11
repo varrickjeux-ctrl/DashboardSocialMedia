@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-<title>Communication EDO — Centre de contrôle réseaux sociaux</title>
+<title>Communication EDO — Centre de contrôle</title>
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@600;700;800;900&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
@@ -13,21 +13,9 @@
     theme: {
       extend: {
         colors: {
-          edo: {
-            black: '#000000',
-            ink: '#0D0D0D',
-            ink2: '#161616',
-            orange: '#FFA200',
-            yellow: '#FFC300',
-            white: '#FFFFFF',
-            paper: '#FAFAF9',
-            line: '#E7E5E2'
-          }
+          edo: { black: '#000000', ink: '#0D0D0D', orange: '#FFA200', yellow: '#FFC300', white: '#FFFFFF', paper: '#FAFAF9', line: '#E7E5E2' }
         },
-        fontFamily: {
-          heading: ['Montserrat', 'sans-serif'],
-          body: ['Inter', 'sans-serif']
-        },
+        fontFamily: { heading: ['Montserrat', 'sans-serif'], body: ['Inter', 'sans-serif'] },
         boxShadow: {
           glow: '0 0 0 1px rgba(255,162,0,0.25), 0 0 24px rgba(255,162,0,0.35)',
           glowSm: '0 0 0 1px rgba(255,162,0,0.3), 0 0 12px rgba(255,195,0,0.35)'
@@ -36,170 +24,24 @@
     }
   };
 </script>
+<link rel="stylesheet" href="style.css" />
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
-<style>
-  html, body { height: 100%; }
-  body { font-family: 'Inter', sans-serif; background:#FAFAF9; }
-  .font-heading { font-family: 'Montserrat', sans-serif; }
-  ::selection { background:#FFC300; color:#000; }
-  ::-webkit-scrollbar { width: 8px; height: 8px; }
-  ::-webkit-scrollbar-thumb { background: #E7E5E2; border-radius: 8px; }
-  ::-webkit-scrollbar-thumb:hover { background: #FFA200; }
-
-  /* ===== Sidebar / nav ===== */
-  .nav-btn .nav-label {
-    position: relative; border: 1px solid transparent;
-  }
-  .nav-btn[data-active="true"] .nav-label {
-    color:#fff; background:rgba(255,162,0,0.12);
-    border-color: rgba(255,162,0,0.35);
-    box-shadow: inset 0 0 0 1px rgba(255,162,0,0.08), 0 0 18px rgba(255,162,0,0.18);
-  }
-  .nav-btn[data-active="true"] .nav-label::before {
-    content:""; position:absolute; left:-12px; top:8px; bottom:8px; width:3px;
-    background:linear-gradient(180deg,#FFA200,#FFC300); border-radius:2px;
-    box-shadow: 0 0 10px rgba(255,162,0,0.9);
-  }
-  .nav-btn:not([data-active="true"]):hover .nav-label { background: rgba(255,255,255,0.05); }
-
-  .bottom-nav-btn[data-active="true"] { color:#FFA200; }
-  .bottom-nav-btn[data-active="true"] .bn-dot { opacity:1; }
-  .bottom-nav-btn[data-active="false"] { color:rgba(255,255,255,0.45); }
-  .bn-dot { opacity:0; transition: opacity .2s ease; }
-
-  .toggle-btn[data-active="true"] .toggle-inner { background:#000; color:#fff; box-shadow: 0 0 14px rgba(0,0,0,0.25); }
-  .toggle-btn[data-active="false"] .toggle-inner { background:#fff; color:#6B6B6B; }
-
-  .range-btn[data-active="true"] .range-inner { background:#000; color:#fff; }
-  .range-btn[data-active="false"] .range-inner { background:transparent; color:#3A3A3A; }
-
-  .subview-btn[data-active="true"] .subview-inner { background:linear-gradient(135deg,#FFA200,#FFC300); color:#000; box-shadow: 0 4px 14px rgba(255,162,0,0.35); }
-  .subview-btn[data-active="false"] .subview-inner { background:transparent; color:#3A3A3A; }
-
-  .view { display:none; }
-  .view[data-visible="true"] { display:block; }
-
-  input:focus, select:focus, textarea:focus, button:focus-visible {
-    outline: 2px solid #FFA200; outline-offset: 1px;
-  }
-
-  .kpi-accent { background: linear-gradient(135deg,#FFA200,#FFC300); }
-  .text-gradient { background: linear-gradient(135deg,#FFA200,#FFC300); -webkit-background-clip:text; background-clip:text; color:transparent; }
-
-  table.data-table th, table.data-table td { padding: 11px 16px; }
-  table.data-table tbody tr:hover { background:#FFFBF2; }
-
-  .cal-dot { width:6px; height:6px; border-radius:9999px; display:inline-block; }
-  .cal-cell { min-height: 92px; }
-  .cal-cell[data-has-post="true"]:hover { background:#FFFBF2; cursor:pointer; }
-  .cal-cell[data-selected="true"] { outline: 2px solid #FFA200; outline-offset:-2px; box-shadow: inset 0 0 0 1px #FFA200; }
-
-  @media (max-width: 640px) {
-    .cal-cell { min-height: 54px; }
-    .cal-dot { width: 5px; height: 5px; }
-  }
-
-  /* ===== Glass header ===== */
-  .glass-header {
-    background: rgba(255,255,255,0.72);
-    backdrop-filter: blur(16px) saturate(160%);
-    -webkit-backdrop-filter: blur(16px) saturate(160%);
-    border-bottom: 1px solid rgba(0,0,0,0.06);
-  }
-
-  /* ===== XP / Level badge ===== */
-  .xp-badge {
-    background: linear-gradient(135deg,#111,#000);
-    border: 1px solid rgba(255,162,0,0.5);
-    box-shadow: 0 0 16px rgba(255,162,0,0.25);
-  }
-
-  /* ===== Animations (desktop) ===== */
-  .fade-target { opacity: 1; transition: opacity 0.4s ease, transform 0.4s ease; }
-  .fade-target.fade-out { opacity: 0; transform: translateY(6px); }
-
-  @keyframes scaleIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
-  .anim-scale-in { animation: scaleIn 0.35s ease; }
-
-  @keyframes fadeSlideUp { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
-  .anim-fade-up { animation: fadeSlideUp 0.4s ease; }
-
-  @keyframes floatSlow { 0%,100% { transform: translateY(0px); } 50% { transform: translateY(-8px); } }
-  .anim-float { animation: floatSlow 4s ease-in-out infinite; }
-
-  @keyframes pulseGlow { 0%,100% { box-shadow: 0 0 8px rgba(255,162,0,0.35); } 50% { box-shadow: 0 0 20px rgba(255,162,0,0.7); } }
-  .glow-pulse { animation: pulseGlow 2.2s ease-in-out infinite; }
-
-  .card-hover { transition: box-shadow 0.25s ease, transform 0.25s ease, border-color .25s ease; }
-  .card-hover:hover { box-shadow: 0 10px 28px rgba(0,0,0,0.08); transform: translateY(-2px); border-color: rgba(255,162,0,0.35); }
-
-  .btn-press { transition: transform 0.15s ease, box-shadow 0.2s ease, opacity 0.2s ease; }
-  .btn-press:hover { transform: translateY(-1px) scale(1.015); }
-  .btn-press:active { transform: scale(0.97) translateY(0); }
-
-  #login-screen { transition: opacity 0.4s ease; }
-  #app-shell { transition: opacity 0.4s ease; }
-  #loading-screen { transition: opacity 0.5s ease; }
-
-  /* Kill heavy motion on mobile — instant, native-app-like nav */
-  @media (max-width: 767px) {
-    .card-hover, .btn-press, .anim-fade-up, .anim-scale-in, .anim-float, .glow-pulse, .fade-target {
-      transition: none !important;
-      animation: none !important;
-      transform: none !important;
-    }
-    .card-hover:hover, .btn-press:hover, .btn-press:active { box-shadow: none !important; transform: none !important; }
-  }
-
-  @media (prefers-reduced-motion: reduce) {
-    * { transition: none !important; animation: none !important; }
-  }
-
-  /* ===== Loading screen ===== */
-  .loading-track { background: rgba(255,255,255,0.08); border: 1px solid rgba(255,162,0,0.25); }
-  .loading-fill {
-    background: linear-gradient(90deg,#FFA200,#FFC300);
-    width: 0%;
-    box-shadow: 0 0 18px rgba(255,162,0,0.7);
-    transition: width .25s linear;
-  }
-  .loading-fill.striped {
-    background-image: linear-gradient(135deg, rgba(0,0,0,0.15) 25%, transparent 25%, transparent 50%, rgba(0,0,0,0.15) 50%, rgba(0,0,0,0.15) 75%, transparent 75%, transparent);
-    background-size: 22px 22px;
-  }
-  @keyframes stripeMove { from { background-position: 0 0; } to { background-position: 44px 0; } }
-  .loading-fill.striped { animation: stripeMove 1s linear infinite; }
-
-  @keyframes phraseIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
-  .phrase-anim { animation: phraseIn 0.35s ease; }
-
-  /* ===== Kanban ===== */
-  .kanban-col { background: #F3F1EC; border: 1px solid #E7E5E2; }
-  .kanban-col[data-dragover="true"] { background: #FFF6E6; border-color: #FFA200; box-shadow: inset 0 0 0 2px rgba(255,162,0,0.4); }
-  .kanban-card { cursor: grab; touch-action: none; }
-  .kanban-card:active { cursor: grabbing; }
-  .kanban-card.dragging { opacity: 0.4; }
-
-  /* ===== Swatch ===== */
-  .swatch { cursor: pointer; transition: transform .2s ease, box-shadow .2s ease; }
-  .swatch:hover { transform: translateY(-3px); box-shadow: 0 8px 20px rgba(0,0,0,0.12); }
-
-  /* ===== Empty state illustration blob ===== */
-  .empty-blob { background: radial-gradient(circle at 30% 30%, rgba(255,195,0,0.35), rgba(255,162,0,0.08) 60%, transparent 70%); }
-</style>
 </head>
-<body class="text-edo-ink">
+<body class="text-edo-ink font-body bg-edo-paper">
 
-<!-- ============ AUTH CHECK SPLASH ============ -->
+<!-- TOASTS -->
+<div id="toast-stack" class="fixed top-4 right-4 z-[80] flex flex-col gap-2 items-end pointer-events-none"></div>
+
+<!-- AUTH SPLASH -->
 <div id="auth-splash" class="fixed inset-0 z-[70] bg-black flex items-center justify-center">
-  <p class="font-heading font-extrabold text-white text-xl tracking-tight">Communication <span class="text-gradient">EDO</span></p>
+  <p class="font-heading font-black text-white text-xl tracking-tight">Communication <span class="text-gradient">EDO</span></p>
 </div>
 
-<!-- ============ LOGIN SCREEN ============ -->
+<!-- LOGIN SCREEN -->
 <div id="login-screen" class="hidden fixed inset-0 z-50 bg-black flex items-center justify-center px-6 opacity-0 overflow-hidden">
   <div class="absolute inset-0 pointer-events-none">
-    <div class="absolute -top-24 -left-24 w-96 h-96 rounded-full anim-float" style="background: radial-gradient(circle, rgba(255,162,0,0.25), transparent 70%); filter: blur(10px);"></div>
-    <div class="absolute -bottom-24 -right-24 w-96 h-96 rounded-full anim-float" style="background: radial-gradient(circle, rgba(255,195,0,0.2), transparent 70%); filter: blur(10px); animation-delay:-2s;"></div>
+    <div class="blob-float absolute -top-24 -left-24 w-96 h-96 rounded-full" style="background: radial-gradient(circle, rgba(255,162,0,0.25), transparent 70%); filter: blur(10px);"></div>
+    <div class="blob-float absolute -bottom-24 -right-24 w-96 h-96 rounded-full" style="background: radial-gradient(circle, rgba(255,195,0,0.2), transparent 70%); filter: blur(10px); animation-delay:-2s;"></div>
   </div>
 
   <div class="relative w-full max-w-sm anim-scale-in">
@@ -208,61 +50,50 @@
       <p class="text-sm text-white/50 mt-1.5">Centre de contrôle réseaux sociaux</p>
     </div>
 
-    <form id="login-form" class="bg-white rounded-2xl p-6 space-y-4 shadow-2xl border border-white/10" onsubmit="handleLogin(event)">
+    <form id="login-form" class="bg-white rounded-2xl p-6 space-y-4 shadow-2xl">
       <div>
         <label class="block text-xs font-semibold text-black/60 mb-1.5">Email</label>
-        <input required type="email" id="login-email" autocomplete="username" placeholder="prenom.nom@edocampus.fr" class="w-full border border-edo-line rounded-lg px-3 py-2.5 text-sm bg-white transition-colors" />
+        <input required type="email" id="login-email" autocomplete="username" placeholder="prenom.nom@edocampus.fr" class="w-full border border-edo-line rounded-lg px-3 py-2.5 text-sm bg-white" />
       </div>
       <div>
         <label class="block text-xs font-semibold text-black/60 mb-1.5">Mot de passe</label>
-        <input required type="password" id="login-password" autocomplete="current-password" placeholder="••••••••" class="w-full border border-edo-line rounded-lg px-3 py-2.5 text-sm bg-white transition-colors" />
+        <input required type="password" id="login-password" autocomplete="current-password" placeholder="••••••••" class="w-full border border-edo-line rounded-lg px-3 py-2.5 text-sm bg-white" />
       </div>
-
       <p id="login-error" class="hidden text-xs font-medium text-red-500 bg-red-50 border border-red-100 rounded-lg px-3 py-2"></p>
-
-      <button type="submit" id="login-submit" class="btn-press w-full py-3 rounded-xl font-heading font-bold text-sm text-black kpi-accent disabled:opacity-50 shadow-glowSm">
+      <button type="submit" id="login-submit" class="w-full py-3 rounded-xl font-heading font-bold text-sm text-black kpi-accent disabled:opacity-50 shadow-glowSm md:hover:brightness-105 md:transition">
         Se connecter
       </button>
     </form>
 
     <div id="login-config-banner" class="hidden mt-4 text-xs text-white/60 bg-white/5 rounded-lg px-3 py-2.5 text-center">
-      ⚠️ Config Firebase non renseignée — complète l'objet <code class="font-mono">firebaseConfig</code> en bas du fichier.
+      ⚠️ Config Firebase vide — complète l'objet <code class="font-mono">firebaseConfig</code> en haut de app.js.
     </div>
   </div>
 </div>
 
-<!-- ============ LOADING SCREEN (post-login) ============ -->
+<!-- LOADING SCREEN -->
 <div id="loading-screen" class="hidden fixed inset-0 z-[65] bg-black flex items-center justify-center px-6 opacity-0 overflow-hidden">
   <div class="absolute inset-0 pointer-events-none">
-    <div class="absolute top-1/4 left-1/4 w-72 h-72 rounded-full anim-float" style="background: radial-gradient(circle, rgba(255,162,0,0.22), transparent 70%); filter: blur(20px);"></div>
-    <div class="absolute bottom-1/4 right-1/4 w-72 h-72 rounded-full anim-float" style="background: radial-gradient(circle, rgba(255,195,0,0.18), transparent 70%); filter: blur(20px); animation-delay:-1.5s;"></div>
+    <div class="blob-float absolute top-1/4 left-1/4 w-72 h-72 rounded-full" style="background: radial-gradient(circle, rgba(255,162,0,0.22), transparent 70%); filter: blur(20px);"></div>
+    <div class="blob-float absolute bottom-1/4 right-1/4 w-72 h-72 rounded-full" style="background: radial-gradient(circle, rgba(255,195,0,0.18), transparent 70%); filter: blur(20px); animation-delay:-1.5s;"></div>
   </div>
-
   <div class="relative w-full max-w-md text-center">
     <p class="font-heading font-black text-2xl sm:text-3xl text-white tracking-tight mb-1">Communication <span class="text-gradient">EDO</span></p>
     <p class="text-[11px] uppercase tracking-[0.2em] text-white/40 font-semibold mb-10">Chargement du poste de pilotage</p>
-
     <div class="loading-track w-full h-4 rounded-full overflow-hidden">
-      <div id="loading-fill" class="loading-fill striped h-full rounded-full"></div>
+      <div id="loading-fill" class="loading-fill h-full rounded-full"></div>
     </div>
     <p id="loading-pct" class="text-white/50 text-xs font-mono mt-2">0%</p>
-
     <div class="h-10 mt-6 flex items-center justify-center">
       <p id="loading-phrase" class="phrase-anim text-white/80 text-sm font-medium">Connexion à la matrice EDO…</p>
-    </div>
-
-    <div class="mt-8 flex items-center justify-center gap-1.5">
-      <span class="xp-badge px-3 py-1 rounded-full text-[10px] font-heading font-bold text-edo-orange">LVL UP</span>
-      <span class="text-white/30 text-[10px]">•</span>
-      <span class="text-white/40 text-[10px] font-medium">Ne coupe pas le Wi-Fi, l'équipe compte sur toi</span>
     </div>
   </div>
 </div>
 
-<!-- ============ APP SHELL (masqué tant que non connecté) ============ -->
+<!-- APP SHELL -->
 <div id="app-shell" class="hidden min-h-screen opacity-0">
 
-  <!-- SIDEBAR (desktop / tablette) -->
+  <!-- SIDEBAR (desktop) -->
   <aside class="hidden md:flex w-64 shrink-0 bg-black text-white flex-col justify-between fixed inset-y-0 left-0 z-30">
     <div class="overflow-y-auto">
       <div class="px-6 pt-8 pb-6">
@@ -270,40 +101,39 @@
         <p class="text-xs text-white/40 mt-1.5">Centre de contrôle</p>
       </div>
 
-      <nav class="mt-2 flex flex-col gap-1.5 px-3">
-        <button class="nav-btn" data-tab="saisie" data-active="true" onclick="switchTab('saisie')">
-          <span class="nav-label flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-white/70 transition-all duration-300">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
-            Saisie &amp; historique
-          </span>
-        </button>
-        <button class="nav-btn" data-tab="dashboard" data-active="false" onclick="switchTab('dashboard')">
-          <span class="nav-label flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-white/70 transition-all duration-300">
+      <!-- Level / XP -->
+      <div class="mx-4 mb-5 p-3 rounded-xl xp-badge">
+        <div class="flex items-center justify-between mb-1.5">
+          <span id="level-label" class="text-[11px] font-heading font-bold text-edo-orange">NIVEAU 1</span>
+          <span id="streak-label" class="text-[10px] text-white/40">🔥 0 j</span>
+        </div>
+        <div class="xp-track h-2 rounded-full overflow-hidden">
+          <div id="xp-fill" class="xp-fill h-full rounded-full" style="width:0%"></div>
+        </div>
+      </div>
+
+      <nav class="flex flex-col gap-1.5 px-3">
+        <button class="nav-btn" data-tab="dashboard" data-active="true" onclick="switchTab('dashboard')">
+          <span class="nav-label flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-white/70 md:transition-all md:duration-300">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18M7 15l4-4 3 3 5-6"/></svg>
-            Dashboard
+            Dashboard RS
           </span>
         </button>
-        <button class="nav-btn" data-tab="calendrier" data-active="false" onclick="switchTab('calendrier')">
-          <span class="nav-label flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-white/70 transition-all duration-300">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 3v3M16 3v3"/></svg>
-            Calendrier
+        <button class="nav-btn" data-tab="ambassadeurs" data-active="false" onclick="switchTab('ambassadeurs')">
+          <span class="nav-label flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-white/70 md:transition-all md:duration-300">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l2.5 6.5L21 9l-5 4.5L17.5 21 12 17l-5.5 4L8 13.5 3 9l6.5-.5L12 2z"/></svg>
+            Ambassadeurs
           </span>
         </button>
         <button class="nav-btn" data-tab="taches" data-active="false" onclick="switchTab('taches')">
-          <span class="nav-label flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-white/70 transition-all duration-300">
+          <span class="nav-label flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-white/70 md:transition-all md:duration-300">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="18" rx="1.5"/><rect x="10.5" y="3" width="7" height="12" rx="1.5"/><rect x="18" y="3" width="3" height="7" rx="1.5"/></svg>
-            Quêtes &amp; tâches
-          </span>
-        </button>
-        <button class="nav-btn" data-tab="swipe" data-active="false" onclick="switchTab('swipe')">
-          <span class="nav-label flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-white/70 transition-all duration-300">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20l-8-8a5 5 0 117-7l1 1 1-1a5 5 0 117 7l-8 8z"/></svg>
-            Swipe file
+            Quêtes
           </span>
         </button>
         <button class="nav-btn" data-tab="brand" data-active="false" onclick="switchTab('brand')">
-          <span class="nav-label flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-white/70 transition-all duration-300">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><circle cx="8.5" cy="10.5" r="1.3" fill="currentColor" stroke="none"/><circle cx="12.5" cy="7.5" r="1.3" fill="currentColor" stroke="none"/><circle cx="15.5" cy="11.5" r="1.3" fill="currentColor" stroke="none"/><path d="M12 21a9 9 0 006-15.8"/></svg>
+          <span class="nav-label flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-white/70 md:transition-all md:duration-300">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><circle cx="8.5" cy="10.5" r="1.3" fill="currentColor" stroke="none"/><circle cx="12.5" cy="7.5" r="1.3" fill="currentColor" stroke="none"/><circle cx="15.5" cy="11.5" r="1.3" fill="currentColor" stroke="none"/></svg>
             Brand Center
           </span>
         </button>
@@ -313,9 +143,9 @@
     <div class="px-4 pb-6 space-y-2">
       <div id="connection-status" class="px-3 py-2.5 rounded-lg text-xs font-medium bg-white/5 text-white/60 flex items-center gap-2">
         <span id="connection-dot" class="w-2 h-2 rounded-full bg-white/30"></span>
-        <span id="connection-text">Connexion à Firebase…</span>
+        <span id="connection-text">Connexion…</span>
       </div>
-      <button onclick="handleLogout()" class="btn-press w-full flex items-center gap-2 px-3 py-2.5 rounded-lg text-xs font-medium text-white/50 hover:text-white hover:bg-white/5">
+      <button onclick="handleLogout()" class="w-full flex items-center gap-2 px-3 py-2.5 rounded-lg text-xs font-medium text-white/50 hover:text-white hover:bg-white/5 md:transition-colors">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9"/></svg>
         Se déconnecter
       </button>
@@ -325,27 +155,24 @@
   <!-- MAIN -->
   <main class="md:ml-64 min-h-screen pb-20 md:pb-0">
 
-    <!-- CONFIG WARNING BANNER -->
     <div id="config-banner" class="hidden bg-edo-orange/15 border-b border-edo-orange/30 px-4 md:px-8 py-3 text-sm text-black/80">
-      ⚠️ Config Firebase non renseignée — remplace l'objet <code class="font-mono text-xs bg-black/5 px-1 rounded">firebaseConfig</code> en bas du fichier avant de déployer.
+      ⚠️ Config Firebase vide — complète l'objet <code class="font-mono text-xs bg-black/5 px-1 rounded">firebaseConfig</code> en haut de app.js avant de déployer.
     </div>
 
-    <!-- APP HEADER (glass, full width, breadcrumb) -->
+    <!-- HEADER -->
     <div class="glass-header sticky top-0 z-20 flex items-center justify-between gap-3 px-4 md:px-8 py-3.5 flex-wrap">
       <div class="flex items-center gap-3 min-w-0">
         <div class="w-9 h-9 rounded-xl kpi-accent flex items-center justify-center font-heading font-black text-xs text-black shrink-0 shadow-glowSm">EDO</div>
         <div class="min-w-0">
           <p class="text-[11px] text-black/40 flex items-center gap-1.5 flex-wrap">
-            <span>Communication EDO</span>
-            <span class="text-black/25">/</span>
-            <span id="breadcrumb-current" class="text-black/70 font-semibold">Saisie &amp; historique</span>
+            <span>Communication EDO</span><span class="text-black/25">/</span>
+            <span id="breadcrumb-current" class="text-black/70 font-semibold">Dashboard RS</span>
           </p>
-          <p id="breadcrumb-sub" class="font-heading font-bold text-sm sm:text-base truncate">Ajoute tes performances du jour</p>
+          <p id="breadcrumb-sub" class="font-heading font-bold text-sm sm:text-base truncate">Le pouls de la communication EDO</p>
         </div>
       </div>
 
       <div class="flex items-center gap-3 sm:gap-5 flex-wrap">
-        <!-- Compteurs abonnés -->
         <div class="flex items-center gap-3 sm:gap-4">
           <div class="flex items-center gap-2">
             <span class="w-2 h-2 rounded-full bg-black shrink-0"></span>
@@ -361,180 +188,118 @@
               <p class="text-[10px] text-black/40 hidden sm:block">Instagram</p>
             </div>
           </div>
-          <button onclick="toggleFollowersPanel()" title="Modifier les compteurs" class="btn-press w-7 h-7 flex items-center justify-center rounded-md border border-edo-line hover:bg-edo-paper bg-white">
+          <button onclick="toggleFollowersPanel()" title="Modifier les compteurs" class="w-7 h-7 flex items-center justify-center rounded-md border border-edo-line hover:bg-edo-paper bg-white md:transition-colors">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 3a2.85 2.85 0 114 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>
           </button>
         </div>
-
         <div class="w-px h-8 bg-edo-line hidden sm:block"></div>
-
-        <!-- Liens réseaux -->
         <div class="flex items-center gap-2">
-          <a href="https://www.linkedin.com/company/88877449/admin/page-posts/published/" target="_blank" rel="noopener" title="Voir la page LinkedIn" class="btn-press w-8 h-8 flex items-center justify-center rounded-lg bg-black text-white hover:opacity-80">
+          <a href="https://www.linkedin.com/company/88877449/admin/page-posts/published/" target="_blank" rel="noopener" title="Voir la page LinkedIn" class="w-8 h-8 flex items-center justify-center rounded-lg bg-black text-white hover:opacity-80 md:transition-opacity">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M20.45 20.45h-3.55v-5.57c0-1.33-.02-3.03-1.85-3.03-1.85 0-2.14 1.45-2.14 2.94v5.66H9.36V9h3.41v1.56h.05c.47-.9 1.63-1.85 3.37-1.85 3.6 0 4.27 2.37 4.27 5.45v6.29zM5.34 7.43a2.06 2.06 0 110-4.12 2.06 2.06 0 010 4.12zM7.11 20.45H3.56V9h3.55v11.45z"/></svg>
           </a>
-          <a href="https://www.instagram.com/edo_campus" target="_blank" rel="noopener" title="Voir le profil Instagram" class="btn-press w-8 h-8 flex items-center justify-center rounded-lg text-white hover:opacity-80" style="background:linear-gradient(135deg,#FFA200,#FFC300)">
+          <a href="https://www.instagram.com/edo_campus" target="_blank" rel="noopener" title="Voir le profil Instagram" class="w-8 h-8 flex items-center justify-center rounded-lg text-white hover:opacity-80 md:transition-opacity" style="background:linear-gradient(135deg,#FFA200,#FFC300)">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#000" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.2" cy="6.8" r="1"/></svg>
           </a>
-        </div>
-
-        <div class="w-px h-8 bg-edo-line hidden lg:block"></div>
-
-        <!-- Avatar statique -->
-        <div class="hidden lg:flex items-center gap-2.5">
-          <div class="w-9 h-9 rounded-full bg-black text-white flex items-center justify-center font-heading font-bold text-xs shrink-0">CM</div>
-          <div class="leading-none">
-            <p class="text-xs font-semibold">Community Manager</p>
-            <span class="xp-badge inline-block mt-1 px-2 py-0.5 rounded-full text-[9px] font-heading font-bold text-edo-orange">EN LIGNE</span>
-          </div>
         </div>
       </div>
     </div>
 
-    <!-- Followers edit panel -->
     <div id="followers-panel" class="hidden px-4 md:px-8 py-3 bg-edo-paper border-b border-edo-line flex items-center gap-3 flex-wrap">
       <label class="text-xs font-semibold text-black/60">Abonnés LinkedIn</label>
       <input type="number" min="0" id="f-followers-linkedin" class="w-24 border border-edo-line rounded-lg px-3 py-1.5 text-sm" />
       <label class="text-xs font-semibold text-black/60">Abonnés Instagram</label>
       <input type="number" min="0" id="f-followers-instagram" class="w-24 border border-edo-line rounded-lg px-3 py-1.5 text-sm" />
-      <button onclick="saveFollowers()" class="btn-press px-4 py-1.5 rounded-lg text-sm font-semibold text-black kpi-accent">Enregistrer</button>
+      <button onclick="saveFollowers()" class="px-4 py-1.5 rounded-lg text-sm font-semibold text-black kpi-accent">Enregistrer</button>
     </div>
 
-    <!-- VIEW: SAISIE + HISTORIQUE -->
-    <section id="view-saisie" class="view" data-visible="true">
-      <div class="w-full px-4 md:px-8 py-8 md:py-10 2xl:grid 2xl:grid-cols-[minmax(0,560px)_1fr] 2xl:gap-8 2xl:items-start">
-        <div>
-          <p id="form-title" class="font-heading font-bold text-2xl">Ajouter une publication</p>
-          <p class="text-sm text-black/50 mt-1">Renseigne les performances d'un post en quelques secondes. +50 XP à la clé.</p>
-
-          <form id="post-form" class="mt-6 md:mt-8 bg-white border border-edo-line rounded-2xl p-5 md:p-6 space-y-6 shadow-sm" onsubmit="handleSubmit(event)">
-
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
-              <div>
-                <label class="block text-xs font-semibold text-black/60 mb-1.5">Date du post</label>
-                <input required type="date" id="f-date" class="w-full border border-edo-line rounded-lg px-3 py-2.5 text-sm bg-white transition-colors" />
-              </div>
-              <div>
-                <label class="block text-xs font-semibold text-black/60 mb-1.5">Plateforme</label>
-                <div class="grid grid-cols-2 gap-2">
-                  <button type="button" id="btn-instagram" class="toggle-btn btn-press" data-active="true" onclick="setPlatform('instagram')">
-                    <span class="toggle-inner flex items-center justify-center gap-2 border border-edo-line rounded-lg px-3 py-2.5 text-sm font-semibold transition-colors">Instagram</span>
-                  </button>
-                  <button type="button" id="btn-linkedin" class="toggle-btn btn-press" data-active="false" onclick="setPlatform('linkedin')">
-                    <span class="toggle-inner flex items-center justify-center gap-2 border border-edo-line rounded-lg px-3 py-2.5 text-sm font-semibold transition-colors">LinkedIn</span>
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            <div>
-              <label class="block text-xs font-semibold text-black/60 mb-1.5">Titre du post</label>
-              <input required type="text" id="f-title" placeholder="Ex : Journée portes ouvertes" class="w-full border border-edo-line rounded-lg px-3 py-2.5 text-sm bg-white transition-colors" />
-            </div>
-
-            <div id="metrics-grid" class="grid grid-cols-1 sm:grid-cols-3 gap-5"></div>
-
-            <div class="flex items-center gap-3">
-              <button type="submit" id="submit-btn" class="btn-press flex-1 py-3.5 rounded-xl font-heading font-bold text-sm text-black kpi-accent shadow-glowSm">
-                Ajouter les performances
-              </button>
-              <button type="button" id="cancel-edit-btn" onclick="cancelEdit()" class="hidden btn-press px-5 py-3.5 rounded-xl font-heading font-semibold text-sm border border-edo-line text-black/60 hover:bg-edo-paper">
-                Annuler
-              </button>
-            </div>
-          </form>
-        </div>
-
-        <div class="mt-8 2xl:mt-0">
-          <p class="font-heading font-semibold text-sm text-black/70 mb-3">Historique des publications</p>
-          <div class="bg-white border border-edo-line rounded-2xl overflow-x-auto shadow-sm">
-            <table class="data-table w-full text-sm min-w-[560px]">
-              <thead>
-                <tr class="text-left text-[11px] text-black/40 border-b border-edo-line">
-                  <th>Date</th><th>Plateforme</th><th>Titre</th><th>Vues</th><th>Engagement</th><th></th>
-                </tr>
-              </thead>
-              <tbody id="history-list" class="fade-target"></tbody>
-            </table>
-            <div id="history-empty" class="hidden px-4 py-10 text-center">
-              <div class="empty-blob w-20 h-20 rounded-full mx-auto mb-3"></div>
-              <p class="text-sm font-semibold text-black/60">Aucun post ici… l'algorithme pleure.</p>
-              <p class="text-xs text-black/35 mt-1">Ajoute ta première publication pour le consoler.</p>
-            </div>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <!-- VIEW: DASHBOARD -->
-    <section id="view-dashboard" class="view" data-visible="false">
+    <!-- VIEW: DASHBOARD RS -->
+    <section id="view-dashboard" class="view" data-visible="true">
       <div class="w-full px-4 md:px-8 py-8 md:py-10">
 
-        <div class="flex items-center justify-between flex-wrap gap-4">
-          <div>
-            <p class="font-heading font-bold text-2xl">Dashboard</p>
-            <p class="text-sm text-black/50 mt-1">Vue d'ensemble des performances. Que la data soit avec toi.</p>
-          </div>
-
-          <div class="flex items-center gap-2 overflow-x-auto">
-            <div class="flex bg-white border border-edo-line rounded-lg p-1 gap-1 shrink-0">
-              <button class="range-btn btn-press" data-active="true" data-range="7d" onclick="setRange('7d')">
-                <span class="range-inner px-3.5 py-1.5 rounded-md text-sm font-medium block whitespace-nowrap transition-colors">7 jours</span>
-              </button>
-              <button class="range-btn btn-press" data-active="false" data-range="30d" onclick="setRange('30d')">
-                <span class="range-inner px-3.5 py-1.5 rounded-md text-sm font-medium block whitespace-nowrap transition-colors">30 jours</span>
-              </button>
-              <button class="range-btn btn-press" data-active="false" data-range="custom" onclick="setRange('custom')">
-                <span class="range-inner px-3.5 py-1.5 rounded-md text-sm font-medium block whitespace-nowrap transition-colors">Personnalisé</span>
-              </button>
-            </div>
-          </div>
+        <div class="flex items-center justify-between flex-wrap gap-3">
+          <button id="toggle-form-btn" onclick="toggleForm()" class="px-5 py-3 rounded-xl font-heading font-bold text-sm text-black kpi-accent shadow-glowSm md:hover:brightness-105 md:transition">
+            + Ajouter une publication
+          </button>
+          <button onclick="exportPostsCSV()" class="px-5 py-3 rounded-xl font-heading font-bold text-sm border-2 border-black text-black bg-white md:hover:bg-black md:hover:text-white md:transition-colors">
+            ⬇ Exporter en CSV
+          </button>
         </div>
 
+        <!-- FORM (collapsible) -->
+        <form id="post-form" class="hidden mt-4 bg-white border border-edo-line rounded-2xl p-5 md:p-6 space-y-6 shadow-sm">
+          <p id="form-title" class="font-heading font-bold text-lg">Ajouter une publication</p>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
+            <div>
+              <label class="block text-xs font-semibold text-black/60 mb-1.5">Date du post</label>
+              <input required type="date" id="f-date" class="w-full border border-edo-line rounded-lg px-3 py-2.5 text-sm bg-white" />
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-black/60 mb-1.5">Plateforme</label>
+              <div class="grid grid-cols-2 gap-2">
+                <button type="button" id="btn-instagram" class="toggle-btn" data-active="true" onclick="setPlatform('instagram')">
+                  <span class="toggle-inner flex items-center justify-center gap-2 border border-edo-line rounded-lg px-3 py-2.5 text-sm font-semibold md:transition-colors">Instagram</span>
+                </button>
+                <button type="button" id="btn-linkedin" class="toggle-btn" data-active="false" onclick="setPlatform('linkedin')">
+                  <span class="toggle-inner flex items-center justify-center gap-2 border border-edo-line rounded-lg px-3 py-2.5 text-sm font-semibold md:transition-colors">LinkedIn</span>
+                </button>
+              </div>
+            </div>
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-black/60 mb-1.5">Titre du post</label>
+            <input required type="text" id="f-title" placeholder="Ex : Journée portes ouvertes" class="w-full border border-edo-line rounded-lg px-3 py-2.5 text-sm bg-white" />
+          </div>
+          <div id="metrics-grid" class="grid grid-cols-1 sm:grid-cols-3 gap-5"></div>
+          <div class="flex items-center gap-3">
+            <button type="submit" id="submit-btn" class="flex-1 py-3.5 rounded-xl font-heading font-bold text-sm text-black kpi-accent shadow-glowSm">Ajouter les performances</button>
+            <button type="button" id="cancel-edit-btn" onclick="cancelEdit()" class="hidden px-5 py-3.5 rounded-xl font-heading font-semibold text-sm border border-edo-line text-black/60 hover:bg-edo-paper">Annuler</button>
+          </div>
+        </form>
+
+        <!-- Sub-views + range -->
+        <div class="flex items-center justify-between flex-wrap gap-3 mt-8">
+          <div class="flex bg-white border border-edo-line rounded-lg p-1 gap-1 w-fit overflow-x-auto">
+            <button class="subview-btn" data-active="true" data-subview="global" onclick="setSubview('global')"><span class="subview-inner px-4 py-1.5 rounded-md text-sm font-semibold block whitespace-nowrap md:transition-colors">Vue globale</span></button>
+            <button class="subview-btn" data-active="false" data-subview="linkedin" onclick="setSubview('linkedin')"><span class="subview-inner px-4 py-1.5 rounded-md text-sm font-semibold block whitespace-nowrap md:transition-colors">LinkedIn</span></button>
+            <button class="subview-btn" data-active="false" data-subview="instagram" onclick="setSubview('instagram')"><span class="subview-inner px-4 py-1.5 rounded-md text-sm font-semibold block whitespace-nowrap md:transition-colors">Instagram</span></button>
+          </div>
+          <div class="flex bg-white border border-edo-line rounded-lg p-1 gap-1 overflow-x-auto">
+            <button class="range-btn" data-active="true" data-range="7d" onclick="setRange('7d')"><span class="range-inner px-3.5 py-1.5 rounded-md text-sm font-medium block whitespace-nowrap md:transition-colors">7 jours</span></button>
+            <button class="range-btn" data-active="false" data-range="30d" onclick="setRange('30d')"><span class="range-inner px-3.5 py-1.5 rounded-md text-sm font-medium block whitespace-nowrap md:transition-colors">30 jours</span></button>
+            <button class="range-btn" data-active="false" data-range="custom" onclick="setRange('custom')"><span class="range-inner px-3.5 py-1.5 rounded-md text-sm font-medium block whitespace-nowrap md:transition-colors">Personnalisé</span></button>
+          </div>
+        </div>
         <div id="custom-range-bar" class="hidden mt-4 flex items-center gap-3 bg-white border border-edo-line rounded-lg p-3 flex-wrap">
           <label class="text-xs font-semibold text-black/60">Du</label>
           <input type="date" id="custom-start" class="border border-edo-line rounded-lg px-3 py-1.5 text-sm" />
           <label class="text-xs font-semibold text-black/60">Au</label>
           <input type="date" id="custom-end" class="border border-edo-line rounded-lg px-3 py-1.5 text-sm" />
-          <button onclick="applyCustomRange()" class="btn-press ml-0 sm:ml-2 px-4 py-1.5 rounded-lg text-sm font-semibold text-black kpi-accent">Appliquer</button>
-        </div>
-
-        <!-- Sub-views -->
-        <div class="flex bg-white border border-edo-line rounded-lg p-1 gap-1 mt-5 w-fit overflow-x-auto">
-          <button class="subview-btn btn-press" data-active="true" data-subview="global" onclick="setSubview('global')">
-            <span class="subview-inner px-4 py-1.5 rounded-md text-sm font-semibold block whitespace-nowrap transition-colors">Vue globale</span>
-          </button>
-          <button class="subview-btn btn-press" data-active="false" data-subview="linkedin" onclick="setSubview('linkedin')">
-            <span class="subview-inner px-4 py-1.5 rounded-md text-sm font-semibold block whitespace-nowrap transition-colors">LinkedIn</span>
-          </button>
-          <button class="subview-btn btn-press" data-active="false" data-subview="instagram" onclick="setSubview('instagram')">
-            <span class="subview-inner px-4 py-1.5 rounded-md text-sm font-semibold block whitespace-nowrap transition-colors">Instagram</span>
-          </button>
+          <button onclick="applyCustomRange()" class="px-4 py-1.5 rounded-lg text-sm font-semibold text-black kpi-accent">Appliquer</button>
         </div>
 
         <!-- KPIs -->
-        <div id="kpi-grid" class="fade-target grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mt-6">
-          <div class="card-hover bg-white border border-edo-line rounded-2xl p-4 shadow-sm">
+        <div id="kpi-grid" class="fade-target grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 gap-4 mt-6">
+          <div class="card-hover bg-white border border-edo-line rounded-2xl p-4 shadow-sm md:transition-all md:duration-300">
             <p class="text-xs font-semibold text-black/50">Total des vues</p>
             <p id="kpi-views" class="font-heading font-extrabold text-2xl mt-2">—</p>
             <p id="kpi-views-evo" class="text-xs font-semibold mt-2"></p>
           </div>
-          <div class="card-hover bg-white border border-edo-line rounded-2xl p-4 shadow-sm">
+          <div class="card-hover bg-white border border-edo-line rounded-2xl p-4 shadow-sm md:transition-all md:duration-300">
             <p class="text-xs font-semibold text-black/50">Total des likes</p>
             <p id="kpi-likes" class="font-heading font-extrabold text-2xl mt-2">—</p>
             <p id="kpi-likes-evo" class="text-xs font-semibold mt-2"></p>
           </div>
-          <div class="card-hover bg-white border border-edo-line rounded-2xl p-4 shadow-sm">
+          <div class="card-hover bg-white border border-edo-line rounded-2xl p-4 shadow-sm md:transition-all md:duration-300">
             <p class="text-xs font-semibold text-black/50">Total des commentaires</p>
             <p id="kpi-comments" class="font-heading font-extrabold text-2xl mt-2">—</p>
             <p id="kpi-comments-evo" class="text-xs font-semibold mt-2"></p>
           </div>
-          <div class="card-hover bg-white border border-edo-line rounded-2xl p-4 shadow-sm">
+          <div class="card-hover bg-white border border-edo-line rounded-2xl p-4 shadow-sm md:transition-all md:duration-300">
             <p class="text-xs font-semibold text-black/50">Visibilité globale</p>
             <p id="kpi-visibility" class="font-heading font-extrabold text-2xl mt-2">—</p>
             <p class="text-[10px] text-black/35 mt-2">Vues cumulées LinkedIn + Instagram</p>
           </div>
-          <div class="card-hover bg-white border border-edo-line rounded-2xl p-4 shadow-sm relative overflow-hidden">
+          <div class="card-hover bg-white border border-edo-line rounded-2xl p-4 shadow-sm md:transition-all md:duration-300">
             <p class="text-xs font-semibold text-black/50">Engagement moyen</p>
             <p id="kpi-engagement" class="font-heading font-extrabold text-2xl mt-2">—</p>
             <p id="kpi-engagement-evo" class="text-xs font-semibold mt-2"></p>
@@ -551,161 +316,120 @@
         <!-- Palmarès -->
         <p class="font-heading font-semibold text-lg mt-8">Palmarès <span class="text-black/30 text-sm font-medium">— le tableau des scores</span></p>
         <div id="ranking-grid" class="fade-target grid grid-cols-1 md:grid-cols-3 gap-5 mt-3">
-          <div class="card-hover bg-white border border-edo-line rounded-2xl p-5 shadow-sm">
+          <div class="card-hover bg-white border border-edo-line rounded-2xl p-5 shadow-sm md:transition-all md:duration-300">
             <p class="font-heading font-semibold text-sm">Top 3 — Taux d'engagement</p>
             <ol id="ranking-engagement" class="mt-3 space-y-2"></ol>
           </div>
-          <div class="card-hover bg-white border border-edo-line rounded-2xl p-5 shadow-sm">
+          <div class="card-hover bg-white border border-edo-line rounded-2xl p-5 shadow-sm md:transition-all md:duration-300">
             <p class="font-heading font-semibold text-sm">Top 3 — Vues / impressions</p>
             <ol id="ranking-views" class="mt-3 space-y-2"></ol>
           </div>
-          <div class="card-hover bg-white border border-edo-line rounded-2xl p-5 shadow-sm">
+          <div class="card-hover bg-white border border-edo-line rounded-2xl p-5 shadow-sm md:transition-all md:duration-300">
             <p class="font-heading font-semibold text-sm">Top 3 — Interactions</p>
             <p class="text-[11px] text-black/35 -mt-1">Likes + commentaires</p>
             <ol id="ranking-interactions" class="mt-3 space-y-2"></ol>
           </div>
         </div>
 
-        <!-- Table -->
-        <div id="dashboard-table-wrapper" class="fade-target mt-6 bg-white border border-edo-line rounded-2xl overflow-x-auto shadow-sm">
-          <table class="data-table w-full text-sm min-w-[560px]">
+        <!-- Historique -->
+        <p class="font-heading font-semibold text-sm text-black/70 mt-8 mb-3">Historique des publications</p>
+        <div id="dashboard-table-wrapper" class="fade-target bg-white border border-edo-line rounded-2xl overflow-x-auto shadow-sm">
+          <table class="data-table w-full text-sm min-w-[620px]">
             <thead>
               <tr class="text-left text-[11px] text-black/40 border-b border-edo-line">
-                <th>Date</th><th>Plateforme</th><th>Titre</th><th>Vues</th><th>Interactions</th><th>Engagement</th>
+                <th>Date</th><th>Plateforme</th><th>Titre</th><th>Vues</th><th>Interactions</th><th>Engagement</th><th></th>
               </tr>
             </thead>
             <tbody id="dashboard-table"></tbody>
           </table>
           <div id="dashboard-empty" class="hidden px-4 py-10 text-center">
             <div class="empty-blob w-20 h-20 rounded-full mx-auto mb-3"></div>
-            <p class="text-sm font-semibold text-black/60">Rien à afficher sur cette période.</p>
-            <p class="text-xs text-black/35 mt-1">Même les trolls font une pause parfois.</p>
+            <p class="text-sm font-semibold text-black/60">Aucun post ici… l'algorithme pleure.</p>
+            <p class="text-xs text-black/35 mt-1">Ajoute ta première publication pour le consoler.</p>
           </div>
         </div>
-
       </div>
     </section>
 
-    <!-- VIEW: CALENDRIER -->
-    <section id="view-calendrier" class="view" data-visible="false">
-      <div class="w-full px-4 md:px-8 py-8 md:py-10 max-w-5xl">
-        <p class="font-heading font-bold text-2xl">Calendrier de suivi</p>
-        <p class="text-sm text-black/50 mt-1">Fréquence de publication LinkedIn &amp; Instagram.</p>
+    <!-- VIEW: AMBASSADEURS -->
+    <section id="view-ambassadeurs" class="view" data-visible="false">
+      <div class="w-full px-4 md:px-8 py-8 md:py-10">
+        <p class="font-heading font-bold text-2xl">Ambassadeurs</p>
+        <p class="text-sm text-black/50 mt-1">Le classement de ceux qui portent la voix d'EDO Campus.</p>
 
-        <div class="flex items-center justify-between mt-6">
-          <button onclick="shiftMonth(-1)" class="btn-press w-8 h-8 rounded-lg border border-edo-line flex items-center justify-center hover:bg-white bg-white">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
-          </button>
-          <p id="cal-month-label" class="font-heading font-bold text-base"></p>
-          <button onclick="shiftMonth(1)" class="btn-press w-8 h-8 rounded-lg border border-edo-line flex items-center justify-center hover:bg-white bg-white">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
-          </button>
-        </div>
+        <form id="ambassador-form" class="mt-6 bg-white border border-edo-line rounded-2xl p-5 shadow-sm grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 items-end">
+          <div>
+            <label class="block text-xs font-semibold text-black/60 mb-1.5">Prénom</label>
+            <input required type="text" id="amb-firstname" class="w-full border border-edo-line rounded-lg px-3 py-2.5 text-sm bg-white" />
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-black/60 mb-1.5">Nom</label>
+            <input required type="text" id="amb-lastname" class="w-full border border-edo-line rounded-lg px-3 py-2.5 text-sm bg-white" />
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-black/60 mb-1.5">Email</label>
+            <input required type="email" id="amb-email" class="w-full border border-edo-line rounded-lg px-3 py-2.5 text-sm bg-white" />
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-black/60 mb-1.5">Téléphone</label>
+            <input type="tel" id="amb-phone" class="w-full border border-edo-line rounded-lg px-3 py-2.5 text-sm bg-white" />
+          </div>
+          <button type="submit" class="py-2.5 rounded-lg font-heading font-bold text-sm text-black kpi-accent shrink-0">+ Recruter</button>
+        </form>
 
-        <div class="flex items-center gap-4 mt-4 text-xs text-black/50">
-          <span class="flex items-center gap-1.5"><span class="cal-dot bg-edo-orange"></span> Instagram</span>
-          <span class="flex items-center gap-1.5"><span class="cal-dot bg-black"></span> LinkedIn</span>
-        </div>
-
-        <div id="cal-wrapper" class="fade-target grid grid-cols-7 gap-px mt-3 bg-edo-line border border-edo-line rounded-2xl overflow-hidden">
-          <div class="bg-edo-paper text-center text-[10px] sm:text-[11px] font-semibold text-black/40 py-2">Lun</div>
-          <div class="bg-edo-paper text-center text-[10px] sm:text-[11px] font-semibold text-black/40 py-2">Mar</div>
-          <div class="bg-edo-paper text-center text-[10px] sm:text-[11px] font-semibold text-black/40 py-2">Mer</div>
-          <div class="bg-edo-paper text-center text-[10px] sm:text-[11px] font-semibold text-black/40 py-2">Jeu</div>
-          <div class="bg-edo-paper text-center text-[10px] sm:text-[11px] font-semibold text-black/40 py-2">Ven</div>
-          <div class="bg-edo-paper text-center text-[10px] sm:text-[11px] font-semibold text-black/40 py-2">Sam</div>
-          <div class="bg-edo-paper text-center text-[10px] sm:text-[11px] font-semibold text-black/40 py-2">Dim</div>
-          <div id="cal-grid" class="contents"></div>
-        </div>
-
-        <div id="cal-day-panel" class="hidden anim-fade-up mt-5 bg-white border border-edo-line rounded-2xl p-5 shadow-sm">
-          <p id="cal-day-title" class="font-heading font-semibold text-sm"></p>
-          <div id="cal-day-posts" class="mt-3 space-y-2"></div>
+        <div id="ambassador-list" class="mt-6 space-y-3"></div>
+        <div id="ambassador-empty" class="hidden text-center mt-10">
+          <div class="empty-blob w-20 h-20 rounded-full mx-auto mb-3"></div>
+          <p class="text-sm font-semibold text-black/60">Le podium est vide.</p>
+          <p class="text-xs text-black/35 mt-1">Recrute ton premier ambassadeur ci-dessus.</p>
         </div>
       </div>
     </section>
 
-    <!-- VIEW: QUÊTES & TÂCHES (Kanban) -->
+    <!-- VIEW: QUÊTES -->
     <section id="view-taches" class="view" data-visible="false">
       <div class="w-full px-4 md:px-8 py-8 md:py-10">
-        <p class="font-heading font-bold text-2xl">Quêtes &amp; tâches</p>
+        <p class="font-heading font-bold text-2xl">Quêtes</p>
         <p class="text-sm text-black/50 mt-1">Le kanban de l'équipe. Glisse-dépose pour faire avancer la quête.</p>
 
-        <form id="task-form" class="mt-6 bg-white border border-edo-line rounded-2xl p-4 md:p-5 shadow-sm flex flex-col sm:flex-row items-stretch sm:items-end gap-3" onsubmit="handleTaskSubmit(event)">
+        <form id="task-form" class="mt-6 bg-white border border-edo-line rounded-2xl p-4 md:p-5 shadow-sm flex flex-col sm:flex-row items-stretch sm:items-end gap-3">
           <div class="flex-1">
             <label class="block text-xs font-semibold text-black/60 mb-1.5">Titre de la tâche</label>
-            <input required type="text" id="t-title" placeholder="Ex : Storyboard reel rentrée" class="w-full border border-edo-line rounded-lg px-3 py-2.5 text-sm bg-white transition-colors" />
+            <input required type="text" id="t-title" placeholder="Ex : Storyboard reel rentrée" class="w-full border border-edo-line rounded-lg px-3 py-2.5 text-sm bg-white" />
           </div>
           <div class="sm:w-48">
             <label class="block text-xs font-semibold text-black/60 mb-1.5">Assigné·e à</label>
-            <input required type="text" id="t-assignee" placeholder="Ex : Léa" class="w-full border border-edo-line rounded-lg px-3 py-2.5 text-sm bg-white transition-colors" />
+            <input required type="text" id="t-assignee" placeholder="Ex : Léa" class="w-full border border-edo-line rounded-lg px-3 py-2.5 text-sm bg-white" />
           </div>
           <div class="sm:w-40">
             <label class="block text-xs font-semibold text-black/60 mb-1.5">Colonne</label>
-            <select id="t-status" class="w-full border border-edo-line rounded-lg px-3 py-2.5 text-sm bg-white transition-colors">
+            <select id="t-status" class="w-full border border-edo-line rounded-lg px-3 py-2.5 text-sm bg-white">
               <option value="idees">💡 Idées</option>
+              <option value="afaire">📝 À faire</option>
               <option value="encours">🚧 En cours</option>
-              <option value="valide">✅ Validé</option>
+              <option value="valide">🏆 Validé</option>
             </select>
           </div>
-          <button type="submit" class="btn-press px-5 py-2.5 rounded-lg font-heading font-bold text-sm text-black kpi-accent shrink-0">
-            Lancer la quête
-          </button>
+          <button type="submit" class="px-5 py-2.5 rounded-lg font-heading font-bold text-sm text-black kpi-accent shrink-0">Lancer la quête</button>
         </form>
 
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6">
+        <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 mt-6">
           <div class="kanban-col rounded-2xl p-3 md:p-4" data-status="idees" ondragover="handleColDragOver(event)" ondragleave="handleColDragLeave(event)" ondrop="handleColDrop(event, 'idees')">
-            <div class="flex items-center justify-between px-1 mb-3">
-              <p class="font-heading font-bold text-sm flex items-center gap-2">💡 Idées</p>
-              <span id="count-idees" class="text-[11px] font-bold bg-black/5 text-black/50 rounded-full px-2 py-0.5">0</span>
-            </div>
+            <div class="flex items-center justify-between px-1 mb-3"><p class="font-heading font-bold text-sm">💡 Idées</p><span id="count-idees" class="text-[11px] font-bold bg-black/5 text-black/50 rounded-full px-2 py-0.5">0</span></div>
             <div id="col-idees" class="space-y-2.5 min-h-[80px]"></div>
           </div>
-
+          <div class="kanban-col rounded-2xl p-3 md:p-4" data-status="afaire" ondragover="handleColDragOver(event)" ondragleave="handleColDragLeave(event)" ondrop="handleColDrop(event, 'afaire')">
+            <div class="flex items-center justify-between px-1 mb-3"><p class="font-heading font-bold text-sm">📝 À faire</p><span id="count-afaire" class="text-[11px] font-bold bg-black/5 text-black/50 rounded-full px-2 py-0.5">0</span></div>
+            <div id="col-afaire" class="space-y-2.5 min-h-[80px]"></div>
+          </div>
           <div class="kanban-col rounded-2xl p-3 md:p-4" data-status="encours" ondragover="handleColDragOver(event)" ondragleave="handleColDragLeave(event)" ondrop="handleColDrop(event, 'encours')">
-            <div class="flex items-center justify-between px-1 mb-3">
-              <p class="font-heading font-bold text-sm flex items-center gap-2">🚧 En cours</p>
-              <span id="count-encours" class="text-[11px] font-bold bg-black/5 text-black/50 rounded-full px-2 py-0.5">0</span>
-            </div>
+            <div class="flex items-center justify-between px-1 mb-3"><p class="font-heading font-bold text-sm">🚧 En cours</p><span id="count-encours" class="text-[11px] font-bold bg-black/5 text-black/50 rounded-full px-2 py-0.5">0</span></div>
             <div id="col-encours" class="space-y-2.5 min-h-[80px]"></div>
           </div>
-
           <div class="kanban-col rounded-2xl p-3 md:p-4" data-status="valide" ondragover="handleColDragOver(event)" ondragleave="handleColDragLeave(event)" ondrop="handleColDrop(event, 'valide')">
-            <div class="flex items-center justify-between px-1 mb-3">
-              <p class="font-heading font-bold text-sm flex items-center gap-2">✅ Validé</p>
-              <span id="count-valide" class="text-[11px] font-bold bg-black/5 text-black/50 rounded-full px-2 py-0.5">0</span>
-            </div>
+            <div class="flex items-center justify-between px-1 mb-3"><p class="font-heading font-bold text-sm">🏆 Validé</p><span id="count-valide" class="text-[11px] font-bold bg-black/5 text-black/50 rounded-full px-2 py-0.5">0</span></div>
             <div id="col-valide" class="space-y-2.5 min-h-[80px]"></div>
           </div>
-        </div>
-      </div>
-    </section>
-
-    <!-- VIEW: SWIPE FILE -->
-    <section id="view-swipe" class="view" data-visible="false">
-      <div class="w-full px-4 md:px-8 py-8 md:py-10 max-w-5xl">
-        <p class="font-heading font-bold text-2xl">Swipe file</p>
-        <p class="text-sm text-black/50 mt-1">Veille créative partagée par l'équipe.</p>
-
-        <form id="swipe-form" class="mt-6 bg-white border border-edo-line rounded-2xl p-5 md:p-6 space-y-4 shadow-sm" onsubmit="handleSwipeSubmit(event)">
-          <div>
-            <label class="block text-xs font-semibold text-black/60 mb-1.5">URL du post inspirant</label>
-            <input required type="url" id="f-swipe-url" placeholder="https://www.instagram.com/p/…" class="w-full border border-edo-line rounded-lg px-3 py-2.5 text-sm bg-white transition-colors" />
-          </div>
-          <div>
-            <label class="block text-xs font-semibold text-black/60 mb-1.5">Note / idée associée</label>
-            <textarea required id="f-swipe-note" rows="3" placeholder="Ce qui marche dans ce post, comment l'adapter pour EDO Campus…" class="w-full border border-edo-line rounded-lg px-3 py-2.5 text-sm bg-white resize-none transition-colors"></textarea>
-          </div>
-          <button type="submit" class="btn-press w-full py-3 rounded-xl font-heading font-bold text-sm text-black kpi-accent">
-            Ajouter à la veille
-          </button>
-        </form>
-
-        <div id="swipe-grid" class="fade-target grid grid-cols-1 sm:grid-cols-2 gap-4 mt-8"></div>
-        <div id="swipe-empty" class="hidden text-center mt-8">
-          <div class="empty-blob w-20 h-20 rounded-full mx-auto mb-3"></div>
-          <p class="text-sm font-semibold text-black/60">Le mood board est vide.</p>
-          <p class="text-xs text-black/35 mt-1">Le feed, lui, ne t'attendra pas — sois le·la premier·ère à ajouter une idée.</p>
         </div>
       </div>
     </section>
@@ -714,104 +438,33 @@
     <section id="view-brand" class="view" data-visible="false">
       <div class="w-full px-4 md:px-8 py-8 md:py-10">
         <p class="font-heading font-bold text-2xl">Brand Center</p>
-        <p class="text-sm text-black/50 mt-1">Tout ce qu'il faut pour rester on-brand, même à 23h un dimanche.</p>
+        <p class="text-sm text-black/50 mt-1">La palette officielle. Clique sur une couleur pour copier son code hex.</p>
 
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-5 mt-6">
-          <!-- Palette -->
-          <div class="lg:col-span-2 card-hover bg-white border border-edo-line rounded-2xl p-5 shadow-sm">
-            <p class="font-heading font-semibold text-sm mb-1">Palette officielle</p>
-            <p class="text-xs text-black/40 mb-4">Clique sur une couleur pour copier son code hex.</p>
-            <div class="grid grid-cols-2 sm:grid-cols-3 gap-3" id="palette-grid">
-              <button class="swatch btn-press text-left rounded-xl overflow-hidden border border-edo-line" onclick="copyHex('#000000', this)">
-                <div class="h-16" style="background:#000000"></div>
-                <div class="px-3 py-2"><p class="text-xs font-semibold">Noir</p><p class="text-[11px] text-black/40 font-mono">#000000</p></div>
-              </button>
-              <button class="swatch btn-press text-left rounded-xl overflow-hidden border border-edo-line" onclick="copyHex('#0D0D0D', this)">
-                <div class="h-16" style="background:#0D0D0D"></div>
-                <div class="px-3 py-2"><p class="text-xs font-semibold">Ink</p><p class="text-[11px] text-black/40 font-mono">#0D0D0D</p></div>
-              </button>
-              <button class="swatch btn-press text-left rounded-xl overflow-hidden border border-edo-line" onclick="copyHex('#FFA200', this)">
-                <div class="h-16" style="background:#FFA200"></div>
-                <div class="px-3 py-2"><p class="text-xs font-semibold">Orange</p><p class="text-[11px] text-black/40 font-mono">#FFA200</p></div>
-              </button>
-              <button class="swatch btn-press text-left rounded-xl overflow-hidden border border-edo-line" onclick="copyHex('#FFC300', this)">
-                <div class="h-16" style="background:#FFC300"></div>
-                <div class="px-3 py-2"><p class="text-xs font-semibold">Yellow</p><p class="text-[11px] text-black/40 font-mono">#FFC300</p></div>
-              </button>
-              <button class="swatch btn-press text-left rounded-xl overflow-hidden border border-edo-line" onclick="copyHex('#FAFAF9', this)">
-                <div class="h-16 border-b border-edo-line" style="background:#FAFAF9"></div>
-                <div class="px-3 py-2"><p class="text-xs font-semibold">Paper</p><p class="text-[11px] text-black/40 font-mono">#FAFAF9</p></div>
-              </button>
-              <button class="swatch btn-press text-left rounded-xl overflow-hidden border border-edo-line" onclick="copyHex('#E7E5E2', this)">
-                <div class="h-16" style="background:#E7E5E2"></div>
-                <div class="px-3 py-2"><p class="text-xs font-semibold">Line</p><p class="text-[11px] text-black/40 font-mono">#E7E5E2</p></div>
-              </button>
-            </div>
-            <p id="copy-feedback" class="hidden text-[11px] font-semibold text-edo-orange mt-3">Copié dans le presse-papiers !</p>
-          </div>
-
-          <!-- Logo -->
-          <div class="card-hover bg-black text-white rounded-2xl p-5 shadow-sm flex flex-col items-center justify-center text-center">
-            <div class="w-full aspect-square max-w-[160px] rounded-2xl kpi-accent flex items-center justify-center mb-4">
-              <span class="font-heading font-black text-3xl text-black">EDO</span>
-            </div>
-            <p class="font-heading font-semibold text-sm">Logo wordmark</p>
-            <p class="text-[11px] text-white/40 mt-1 mb-4">Export SVG rapide pour les slides et posts.</p>
-            <button onclick="downloadLogo()" class="btn-press w-full py-2.5 rounded-lg font-heading font-bold text-xs kpi-accent text-black">Télécharger le SVG</button>
-          </div>
-        </div>
-
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-5 mt-5">
-          <!-- Typo -->
-          <div class="card-hover bg-white border border-edo-line rounded-2xl p-5 shadow-sm">
-            <p class="font-heading font-semibold text-sm mb-4">Typographie</p>
-            <p class="font-heading font-black text-3xl leading-tight">Montserrat</p>
-            <p class="text-xs text-black/40 mb-4">Titres, boutons, chiffres clés — la voix qui claque.</p>
-            <p class="text-2xl leading-tight" style="font-family:'Inter',sans-serif;">Inter</p>
-            <p class="text-xs text-black/40">Texte courant, légendes, tableaux — la voix qui explique.</p>
-          </div>
-
-          <!-- Voice & tone -->
-          <div class="card-hover bg-white border border-edo-line rounded-2xl p-5 shadow-sm">
-            <p class="font-heading font-semibold text-sm mb-3">Ton de voix</p>
-            <div class="space-y-2.5">
-              <div class="flex items-start gap-2.5">
-                <span class="text-emerald-600 font-bold text-sm shrink-0 mt-0.5">✓</span>
-                <p class="text-sm text-black/70">Direct, complice, un peu taquin — comme un post qu'on aurait envie de liker soi-même.</p>
-              </div>
-              <div class="flex items-start gap-2.5">
-                <span class="text-emerald-600 font-bold text-sm shrink-0 mt-0.5">✓</span>
-                <p class="text-sm text-black/70">Fier sans être pompeux : on célèbre les résultats des étudiants, pas notre propre CV.</p>
-              </div>
-              <div class="flex items-start gap-2.5">
-                <span class="text-red-500 font-bold text-sm shrink-0 mt-0.5">✕</span>
-                <p class="text-sm text-black/70">Jargon corporate et punchlines forcées ("disruptif", "game changer").</p>
-              </div>
-              <div class="flex items-start gap-2.5">
-                <span class="text-red-500 font-bold text-sm shrink-0 mt-0.5">✕</span>
-                <p class="text-sm text-black/70">Plus de trois emojis par post — on n'écrit pas pour l'algorithme, on écrit pour les gens.</p>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Bios copy-paste -->
-        <div class="card-hover bg-white border border-edo-line rounded-2xl p-5 shadow-sm mt-5">
-          <p class="font-heading font-semibold text-sm mb-4">Bios prêtes à coller</p>
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div class="border border-edo-line rounded-xl p-4">
-              <p class="text-xs font-semibold text-black/50 mb-2">Instagram</p>
-              <p id="bio-instagram" class="text-sm text-black/75 leading-snug">🎓 EDO Campus — on forme les pros de demain
-📍 Sur le terrain, pas juste sur les bancs
-👇 Toutes nos formations</p>
-              <button onclick="copyBio('bio-instagram', this)" class="btn-press mt-3 text-xs font-semibold text-edo-orange hover:underline">Copier</button>
-            </div>
-            <div class="border border-edo-line rounded-xl p-4">
-              <p class="text-xs font-semibold text-black/50 mb-2">LinkedIn</p>
-              <p id="bio-linkedin" class="text-sm text-black/75 leading-snug">EDO Campus forme les talents de demain à travers des parcours ancrés dans le réel. Suivez-nous pour découvrir nos formations, nos étudiants et nos partenaires entreprises.</p>
-              <button onclick="copyBio('bio-linkedin', this)" class="btn-press mt-3 text-xs font-semibold text-edo-orange hover:underline">Copier</button>
-            </div>
-          </div>
+        <div class="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-4 mt-6">
+          <button class="swatch text-left rounded-2xl overflow-hidden border border-edo-line bg-white" onclick="copyHex('#000000')">
+            <div class="h-20" style="background:#000000"></div>
+            <div class="px-3 py-2.5"><p class="text-xs font-semibold">Noir</p><p class="text-[11px] text-black/40 font-mono">#000000</p></div>
+          </button>
+          <button class="swatch text-left rounded-2xl overflow-hidden border border-edo-line bg-white" onclick="copyHex('#0D0D0D')">
+            <div class="h-20" style="background:#0D0D0D"></div>
+            <div class="px-3 py-2.5"><p class="text-xs font-semibold">Ink</p><p class="text-[11px] text-black/40 font-mono">#0D0D0D</p></div>
+          </button>
+          <button class="swatch text-left rounded-2xl overflow-hidden border border-edo-line bg-white" onclick="copyHex('#FFA200')">
+            <div class="h-20" style="background:#FFA200"></div>
+            <div class="px-3 py-2.5"><p class="text-xs font-semibold">Orange</p><p class="text-[11px] text-black/40 font-mono">#FFA200</p></div>
+          </button>
+          <button class="swatch text-left rounded-2xl overflow-hidden border border-edo-line bg-white" onclick="copyHex('#FFC300')">
+            <div class="h-20" style="background:#FFC300"></div>
+            <div class="px-3 py-2.5"><p class="text-xs font-semibold">Yellow</p><p class="text-[11px] text-black/40 font-mono">#FFC300</p></div>
+          </button>
+          <button class="swatch text-left rounded-2xl overflow-hidden border border-edo-line bg-white" onclick="copyHex('#FFFFFF')">
+            <div class="h-20 border-b border-edo-line" style="background:#FFFFFF"></div>
+            <div class="px-3 py-2.5"><p class="text-xs font-semibold">Blanc</p><p class="text-[11px] text-black/40 font-mono">#FFFFFF</p></div>
+          </button>
+          <button class="swatch text-left rounded-2xl overflow-hidden border border-edo-line bg-white" onclick="copyHex('#FAFAF9')">
+            <div class="h-20 border-b border-edo-line" style="background:#FAFAF9"></div>
+            <div class="px-3 py-2.5"><p class="text-xs font-semibold">Paper</p><p class="text-[11px] text-black/40 font-mono">#FAFAF9</p></div>
+          </button>
         </div>
       </div>
     </section>
@@ -820,1160 +473,30 @@
 
   <!-- BOTTOM NAV (mobile) -->
   <nav class="md:hidden fixed bottom-0 inset-x-0 bg-black z-40 flex items-stretch justify-around px-1 pb-[env(safe-area-inset-bottom)]">
-    <button class="bottom-nav-btn flex-1 flex flex-col items-center gap-1 py-2.5" data-tab="saisie" data-active="true" onclick="switchTab('saisie')">
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
-      <span class="text-[9.5px] font-medium">Saisie</span>
-      <span class="bn-dot w-1 h-1 rounded-full bg-edo-orange"></span>
-    </button>
-    <button class="bottom-nav-btn flex-1 flex flex-col items-center gap-1 py-2.5" data-tab="dashboard" data-active="false" onclick="switchTab('dashboard')">
+    <button class="bottom-nav-btn flex-1 flex flex-col items-center gap-1 py-2.5" data-tab="dashboard" data-active="true" onclick="switchTab('dashboard')">
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18M7 15l4-4 3 3 5-6"/></svg>
       <span class="text-[9.5px] font-medium">Dashboard</span>
-      <span class="bn-dot w-1 h-1 rounded-full bg-edo-orange"></span>
     </button>
-    <button class="bottom-nav-btn flex-1 flex flex-col items-center gap-1 py-2.5" data-tab="calendrier" data-active="false" onclick="switchTab('calendrier')">
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 3v3M16 3v3"/></svg>
-      <span class="text-[9.5px] font-medium">Calendrier</span>
-      <span class="bn-dot w-1 h-1 rounded-full bg-edo-orange"></span>
+    <button class="bottom-nav-btn flex-1 flex flex-col items-center gap-1 py-2.5" data-tab="ambassadeurs" data-active="false" onclick="switchTab('ambassadeurs')">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l2.5 6.5L21 9l-5 4.5L17.5 21 12 17l-5.5 4L8 13.5 3 9l6.5-.5L12 2z"/></svg>
+      <span class="text-[9.5px] font-medium">Ambassadeurs</span>
     </button>
     <button class="bottom-nav-btn flex-1 flex flex-col items-center gap-1 py-2.5" data-tab="taches" data-active="false" onclick="switchTab('taches')">
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="18" rx="1.5"/><rect x="10.5" y="3" width="7" height="12" rx="1.5"/><rect x="18" y="3" width="3" height="7" rx="1.5"/></svg>
-      <span class="text-[9.5px] font-medium">Tâches</span>
-      <span class="bn-dot w-1 h-1 rounded-full bg-edo-orange"></span>
+      <span class="text-[9.5px] font-medium">Quêtes</span>
     </button>
-    <button class="bottom-nav-btn flex-1 flex flex-col items-center gap-1 py-2.5" onclick="toggleMoreSheet()">
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="5" cy="12" r="1.5" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.5" fill="currentColor" stroke="none"/><circle cx="19" cy="12" r="1.5" fill="currentColor" stroke="none"/></svg>
-      <span class="text-[9.5px] font-medium">Plus</span>
+    <button class="bottom-nav-btn flex-1 flex flex-col items-center gap-1 py-2.5" data-tab="brand" data-active="false" onclick="switchTab('brand')">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/></svg>
+      <span class="text-[9.5px] font-medium">Brand</span>
+    </button>
+    <button class="bottom-nav-btn flex-1 flex flex-col items-center gap-1 py-2.5 text-white/50" data-active="false" onclick="handleLogout()">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9"/></svg>
+      <span class="text-[9.5px] font-medium">Sortir</span>
     </button>
   </nav>
 
-  <!-- MOBILE "MORE" SHEET -->
-  <div id="more-sheet-backdrop" class="hidden md:hidden fixed inset-0 bg-black/50 z-50" onclick="toggleMoreSheet()"></div>
-  <div id="more-sheet" class="hidden md:hidden fixed bottom-0 inset-x-0 z-50 bg-white rounded-t-3xl p-5 pb-[calc(env(safe-area-inset-bottom)+1.25rem)]">
-    <div class="w-10 h-1 bg-edo-line rounded-full mx-auto mb-5"></div>
-    <button class="w-full flex items-center gap-3 px-3 py-3 rounded-xl hover:bg-edo-paper" onclick="switchTab('swipe'); toggleMoreSheet()">
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20l-8-8a5 5 0 117-7l1 1 1-1a5 5 0 117 7l-8 8z"/></svg>
-      <span class="text-sm font-semibold">Swipe file</span>
-    </button>
-    <button class="w-full flex items-center gap-3 px-3 py-3 rounded-xl hover:bg-edo-paper" onclick="switchTab('brand'); toggleMoreSheet()">
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 21a9 9 0 006-15.8"/></svg>
-      <span class="text-sm font-semibold">Brand Center</span>
-    </button>
-    <div class="h-px bg-edo-line my-2"></div>
-    <button class="w-full flex items-center gap-3 px-3 py-3 rounded-xl hover:bg-edo-paper text-red-500" onclick="handleLogout()">
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9"/></svg>
-      <span class="text-sm font-semibold">Se déconnecter</span>
-    </button>
-  </div>
-
 </div>
 
-<script type="module">
-/* ==========================================================================
-   FIREBASE — À CONFIGURER AVANT DÉPLOIEMENT
-   --------------------------------------------------------------------------
-   1. Projet Firebase > Firestore activé > Authentication activé (fournisseur
-      "Email/Password") > crée les comptes de ton équipe côté console
-      (Authentication > Users > Add user) — pas d'inscription depuis l'app.
-   2. Colle ta config web dans l'objet firebaseConfig tout en bas de ce bloc.
-   3. Règles Firestore recommandées (accès réservé aux comptes authentifiés) :
-
-      rules_version = '2';
-      service cloud.firestore {
-        match /databases/{database}/documents {
-          match /social_posts/{postId} {
-            allow read, write: if request.auth != null;
-          }
-          match /swipe_file/{ideaId} {
-            allow read, write: if request.auth != null;
-          }
-          match /app_settings/{settingId} {
-            allow read, write: if request.auth != null;
-          }
-          match /edo_tasks/{taskId} {
-            allow read, write: if request.auth != null;
-          }
-        }
-      }
-
-   4. Collections utilisées : "social_posts", "swipe_file", "app_settings",
-      "edo_tasks" (créées automatiquement au premier enregistrement).
-   ========================================================================== */
-
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-import {
-  getFirestore, collection, addDoc, updateDoc, deleteDoc, doc,
-  onSnapshot, query, orderBy, setDoc, serverTimestamp
-} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-import {
-  getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut
-} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-
-/* ⚠️ Complète cet objet avec tes clés Firebase (Console > Paramètres du projet > SDK) */
-const firebaseConfig = {
-  apiKey: "AIzaSyAnc2-tFoPV0WjziXyHjJJIlF-OUKEYCh0",
-  authDomain: "dashboardedo.firebaseapp.com",
-  projectId: "dashboardedo",
-  storageBucket: "dashboardedo.firebasestorage.app",
-  messagingSenderId: "328324561956",
-  appId: "1:328324561956:web:5c47027f0e481bdf5e2cb1"
-};
-
-const isConfigured = !!firebaseConfig.apiKey;
-let db = null;
-let auth = null;
-let unsubscribers = [];
-
-if (isConfigured) {
-  try {
-    const app = initializeApp(firebaseConfig);
-    db = getFirestore(app);
-    auth = getAuth(app);
-  } catch (e) {
-    console.error('Erreur d\'initialisation Firebase :', e);
-  }
-} else {
-  document.getElementById('config-banner').classList.remove('hidden');
-  document.getElementById('login-config-banner').classList.remove('hidden');
-  document.getElementById('connection-text').textContent = 'Firebase non configuré';
-}
-
-const postsCol = () => collection(db, 'social_posts');
-const swipeCol = () => collection(db, 'swipe_file');
-const tasksCol = () => collection(db, 'edo_tasks');
-const settingsDoc = () => doc(db, 'app_settings', 'counters');
-
-/* ============ CONFIG PLATEFORMES ============ */
-const PLATFORM_CONFIG = {
-  instagram: { label: 'Instagram', viewsLabel: 'Vues', metricALabel: 'Enregistrements', metricBLabel: 'Partages', color: '#FFA200' },
-  linkedin:  { label: 'LinkedIn',  viewsLabel: 'Impressions', metricALabel: 'Reposts', metricBLabel: 'Clics', color: '#000000' }
-};
-function platformConfig(platform) {
-  return PLATFORM_CONFIG[platform] || PLATFORM_CONFIG.instagram;
-}
-
-const BREADCRUMB = {
-  saisie: { title: 'Saisie & historique', sub: "Ajoute tes performances du jour" },
-  dashboard: { title: 'Dashboard', sub: "Le pouls de la communication EDO" },
-  calendrier: { title: 'Calendrier', sub: "Qui publie quoi, et quand" },
-  taches: { title: 'Quêtes & tâches', sub: "Le kanban de l'équipe" },
-  swipe: { title: 'Swipe file', sub: "La veille créative de l'équipe" },
-  brand: { title: 'Brand Center', sub: "Rester on-brand en toutes circonstances" }
-};
-
-/* ============ STATE ============ */
-let state = {
-  posts: [],
-  swipes: [],
-  tasks: [],
-  activeTab: 'saisie',
-  formPlatform: 'instagram',
-  editingId: null,
-  range: { type: '7d', start: null, end: null },
-  subview: 'global',
-  calendar: { year: null, month: null, selectedDate: null },
-  followers: { linkedin: 0, instagram: 0 },
-  draggedTaskId: null
-};
-
-let lineChart = null;
-let appIsShown = false;
-
-/* ============ AUTHENTIFICATION ============ */
-window.handleLogin = async function (evt) {
-  evt.preventDefault();
-  const errorEl = document.getElementById('login-error');
-  const submitBtn = document.getElementById('login-submit');
-  errorEl.classList.add('hidden');
-
-  if (!isConfigured || !auth) {
-    errorEl.textContent = "Firebase n'est pas configuré — contacte un administrateur.";
-    errorEl.classList.remove('hidden');
-    return;
-  }
-
-  const email = document.getElementById('login-email').value.trim();
-  const password = document.getElementById('login-password').value;
-
-  submitBtn.disabled = true;
-  submitBtn.textContent = 'Connexion…';
-
-  try {
-    await signInWithEmailAndPassword(auth, email, password);
-    // onAuthStateChanged prend le relais pour afficher l'écran de chargement puis l'app
-  } catch (err) {
-    errorEl.textContent = mapAuthError(err);
-    errorEl.classList.remove('hidden');
-  } finally {
-    submitBtn.disabled = false;
-    submitBtn.textContent = 'Se connecter';
-  }
-};
-
-function mapAuthError(err) {
-  const code = err && err.code ? err.code : '';
-  if (['auth/invalid-credential', 'auth/wrong-password', 'auth/user-not-found', 'auth/invalid-email'].includes(code)) {
-    return 'Identifiants incorrects. Vérifie ton email et ton mot de passe.';
-  }
-  if (code === 'auth/too-many-requests') {
-    return 'Trop de tentatives — réessaie dans quelques minutes.';
-  }
-  if (code === 'auth/network-request-failed') {
-    return 'Problème de connexion réseau. Réessaie.';
-  }
-  return "Une erreur est survenue. Réessaie.";
-}
-
-window.handleLogout = async function () {
-  if (!auth) return;
-  try {
-    await signOut(auth);
-  } catch (e) {
-    console.error('Erreur lors de la déconnexion :', e);
-  }
-};
-
-function showLogin() {
-  document.getElementById('auth-splash').classList.add('hidden');
-  const login = document.getElementById('login-screen');
-  const loading = document.getElementById('loading-screen');
-  const shell = document.getElementById('app-shell');
-
-  loading.classList.add('opacity-0');
-  setTimeout(() => loading.classList.add('hidden'), 300);
-
-  shell.classList.add('opacity-0');
-  setTimeout(() => { shell.classList.add('hidden'); shell.classList.remove('flex'); }, 300);
-
-  login.classList.remove('hidden');
-  requestAnimationFrame(() => login.classList.remove('opacity-0'));
-
-  document.getElementById('login-form').reset();
-  document.getElementById('login-error').classList.add('hidden');
-}
-
-function showApp() {
-  const loading = document.getElementById('loading-screen');
-  const shell = document.getElementById('app-shell');
-
-  loading.classList.add('opacity-0');
-  setTimeout(() => loading.classList.add('hidden'), 400);
-
-  shell.classList.remove('hidden');
-  shell.classList.add('md:flex');
-  requestAnimationFrame(() => shell.classList.remove('opacity-0'));
-}
-
-/* ============ LOADING SCREEN SEQUENCE ============ */
-const LOADING_PHRASES = [
-  "Connexion à la matrice EDO…",
-  "Nourrissage de l'algorithme…",
-  "Calcul du taux de viralité…",
-  "Torréfaction du café de l'équipe…",
-  "Synchronisation des likes…",
-  "Réveil du community manager…",
-  "Compression des punchlines…",
-  "Prêt à buzzer !"
-];
-
-function runLoadingSequence(onDone) {
-  document.getElementById('auth-splash').classList.add('hidden');
-  const login = document.getElementById('login-screen');
-  login.classList.add('opacity-0');
-  setTimeout(() => login.classList.add('hidden'), 300);
-
-  const loading = document.getElementById('loading-screen');
-  const fill = document.getElementById('loading-fill');
-  const pct = document.getElementById('loading-pct');
-  const phraseEl = document.getElementById('loading-phrase');
-
-  fill.style.width = '0%';
-  pct.textContent = '0%';
-
-  loading.classList.remove('hidden');
-  requestAnimationFrame(() => loading.classList.remove('opacity-0'));
-
-  const totalDuration = 2800; // ms
-  const stepEvery = Math.round(totalDuration / LOADING_PHRASES.length);
-  let phraseIndex = 0;
-  let progress = 0;
-
-  const setPhrase = (i) => {
-    phraseEl.classList.remove('phrase-anim');
-    void phraseEl.offsetWidth; // relance l'animation
-    phraseEl.classList.add('phrase-anim');
-    phraseEl.textContent = LOADING_PHRASES[i % LOADING_PHRASES.length];
-  };
-  setPhrase(0);
-
-  requestAnimationFrame(() => { fill.style.width = '100%'; });
-
-  const progressTimer = setInterval(() => {
-    progress = Math.min(100, progress + 4);
-    pct.textContent = progress + '%';
-    if (progress >= 100) clearInterval(progressTimer);
-  }, totalDuration / 25);
-
-  const phraseTimer = setInterval(() => {
-    phraseIndex += 1;
-    if (phraseIndex < LOADING_PHRASES.length) setPhrase(phraseIndex);
-  }, stepEvery);
-
-  setTimeout(() => {
-    clearInterval(progressTimer);
-    clearInterval(phraseTimer);
-    pct.textContent = '100%';
-    setPhrase(LOADING_PHRASES.length - 1);
-    setTimeout(() => { if (typeof onDone === 'function') onDone(); }, 250);
-  }, totalDuration);
-}
-
-if (isConfigured && auth) {
-  onAuthStateChanged(auth, (user) => {
-    if (user) {
-      if (!appIsShown) {
-        runLoadingSequence(() => {
-          showApp();
-          initListeners();
-          appIsShown = true;
-        });
-      }
-    } else {
-      appIsShown = false;
-      cleanupListeners();
-      showLogin();
-    }
-  });
-} else {
-  // Pas de Firebase configuré : on affiche quand même l'écran de connexion
-  // (désactivé) pour que le message d'avertissement soit visible.
-  showLogin();
-}
-
-/* ============ FIRESTORE LISTENERS ============ */
-function cleanupListeners() {
-  unsubscribers.forEach(unsub => { try { unsub(); } catch (e) {} });
-  unsubscribers = [];
-}
-
-function initListeners() {
-  if (!isConfigured || !db) return;
-  cleanupListeners(); // évite les doublons si appelé plusieurs fois
-
-  try {
-    const postsQuery = query(postsCol(), orderBy('date', 'desc'));
-    const unsubPosts = onSnapshot(postsQuery, (snap) => {
-      state.posts = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-      setConnectionStatus(true);
-      renderHistory();
-      if (state.activeTab === 'dashboard') renderDashboard();
-      if (state.activeTab === 'calendrier') renderCalendar();
-    }, (err) => {
-      console.error('Erreur social_posts :', err);
-      setConnectionStatus(false);
-    });
-    unsubscribers.push(unsubPosts);
-
-    const swipeQuery = query(swipeCol(), orderBy('createdAt', 'desc'));
-    const unsubSwipe = onSnapshot(swipeQuery, (snap) => {
-      state.swipes = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-      renderSwipeGrid();
-    }, (err) => console.error('Erreur swipe_file :', err));
-    unsubscribers.push(unsubSwipe);
-
-    const tasksQuery = query(tasksCol(), orderBy('createdAt', 'desc'));
-    const unsubTasks = onSnapshot(tasksQuery, (snap) => {
-      state.tasks = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-      renderKanban();
-    }, (err) => console.error('Erreur edo_tasks :', err));
-    unsubscribers.push(unsubTasks);
-
-    const unsubSettings = onSnapshot(settingsDoc(), (snap) => {
-      if (snap.exists()) {
-        const data = snap.data() || {};
-        state.followers.linkedin = data.linkedin || 0;
-        state.followers.instagram = data.instagram || 0;
-        renderFollowers();
-      }
-    }, (err) => console.error('Erreur app_settings :', err));
-    unsubscribers.push(unsubSettings);
-  } catch (e) {
-    console.error('Erreur d\'initialisation des écouteurs :', e);
-    setConnectionStatus(false);
-  }
-}
-
-function setConnectionStatus(ok) {
-  const dot = document.getElementById('connection-dot');
-  const text = document.getElementById('connection-text');
-  if (!dot || !text) return;
-  if (ok) {
-    dot.className = 'w-2 h-2 rounded-full bg-emerald-400 glow-pulse';
-    text.textContent = 'Connecté à Firebase';
-  } else {
-    dot.className = 'w-2 h-2 rounded-full bg-red-400';
-    text.textContent = 'Erreur de connexion';
-  }
-}
-
-/* ============ ANIMATION HELPER ============ */
-function replay(elId) {
-  const el = document.getElementById(elId);
-  if (!el) return;
-  el.classList.add('fade-out');
-  requestAnimationFrame(() => {
-    requestAnimationFrame(() => el.classList.remove('fade-out'));
-  });
-}
-
-/* ============ TABS ============ */
-window.switchTab = function (tab) {
-  state.activeTab = tab;
-  ['saisie', 'dashboard', 'calendrier', 'taches', 'swipe', 'brand'].forEach(t => {
-    const section = document.getElementById('view-' + t);
-    if (section) section.dataset.visible = (t === tab);
-  });
-  document.querySelectorAll('.nav-btn, .bottom-nav-btn').forEach(btn => {
-    if (btn.dataset.tab) btn.dataset.active = (btn.dataset.tab === tab);
-  });
-  const activeSection = document.getElementById('view-' + tab);
-  if (activeSection) activeSection.classList.add('anim-fade-up');
-
-  const crumb = BREADCRUMB[tab];
-  if (crumb) {
-    document.getElementById('breadcrumb-current').textContent = crumb.title;
-    document.getElementById('breadcrumb-sub').textContent = crumb.sub;
-  }
-
-  if (tab === 'dashboard') renderDashboard();
-  if (tab === 'calendrier') renderCalendar();
-  if (tab === 'taches') renderKanban();
-};
-
-window.toggleMoreSheet = function () {
-  document.getElementById('more-sheet').classList.toggle('hidden');
-  document.getElementById('more-sheet-backdrop').classList.toggle('hidden');
-};
-
-/* ============ FOLLOWERS ============ */
-window.toggleFollowersPanel = function () {
-  const panel = document.getElementById('followers-panel');
-  panel.classList.toggle('hidden');
-  document.getElementById('f-followers-linkedin').value = state.followers.linkedin;
-  document.getElementById('f-followers-instagram').value = state.followers.instagram;
-};
-
-window.saveFollowers = async function () {
-  const linkedin = Number(document.getElementById('f-followers-linkedin').value) || 0;
-  const instagram = Number(document.getElementById('f-followers-instagram').value) || 0;
-  if (!isConfigured || !db) {
-    alert("Configure Firebase avant d'enregistrer les compteurs.");
-    return;
-  }
-  try {
-    await setDoc(settingsDoc(), { linkedin, instagram }, { merge: true });
-    document.getElementById('followers-panel').classList.add('hidden');
-  } catch (e) {
-    console.error(e);
-    alert("Impossible d'enregistrer les compteurs pour le moment.");
-  }
-};
-
-function renderFollowers() {
-  const l = document.getElementById('followers-linkedin');
-  const i = document.getElementById('followers-instagram');
-  if (l) l.textContent = new Intl.NumberFormat('fr-FR').format(state.followers.linkedin || 0);
-  if (i) i.textContent = new Intl.NumberFormat('fr-FR').format(state.followers.instagram || 0);
-}
-
-/* ============ FORM (Saisie) ============ */
-window.setPlatform = function (platform) {
-  state.formPlatform = platform;
-  document.getElementById('btn-instagram').dataset.active = (platform === 'instagram');
-  document.getElementById('btn-linkedin').dataset.active = (platform === 'linkedin');
-  renderMetricsGrid();
-};
-
-function renderMetricsGrid(values) {
-  const cfg = platformConfig(state.formPlatform);
-  const v = values || {};
-  const grid = document.getElementById('metrics-grid');
-  grid.innerHTML = `
-    <div>
-      <label class="block text-xs font-semibold text-black/60 mb-1.5">${cfg.viewsLabel}</label>
-      <input required type="number" min="0" id="f-views" value="${v.views ?? ''}" class="w-full border border-edo-line rounded-lg px-3 py-2.5 text-sm bg-white transition-colors" />
-    </div>
-    <div>
-      <label class="block text-xs font-semibold text-black/60 mb-1.5">Likes</label>
-      <input required type="number" min="0" id="f-likes" value="${v.likes ?? ''}" class="w-full border border-edo-line rounded-lg px-3 py-2.5 text-sm bg-white transition-colors" />
-    </div>
-    <div>
-      <label class="block text-xs font-semibold text-black/60 mb-1.5">Commentaires</label>
-      <input required type="number" min="0" id="f-comments" value="${v.comments ?? ''}" class="w-full border border-edo-line rounded-lg px-3 py-2.5 text-sm bg-white transition-colors" />
-    </div>
-    <div>
-      <label class="block text-xs font-semibold text-black/60 mb-1.5">${cfg.metricALabel}</label>
-      <input required type="number" min="0" id="f-metricA" value="${v.metricA ?? ''}" class="w-full border border-edo-line rounded-lg px-3 py-2.5 text-sm bg-white transition-colors" />
-    </div>
-    <div>
-      <label class="block text-xs font-semibold text-black/60 mb-1.5">${cfg.metricBLabel}</label>
-      <input required type="number" min="0" id="f-metricB" value="${v.metricB ?? ''}" class="w-full border border-edo-line rounded-lg px-3 py-2.5 text-sm bg-white transition-colors" />
-    </div>
-  `;
-}
-
-window.handleSubmit = async function (evt) {
-  evt.preventDefault();
-  if (!isConfigured || !db) {
-    alert("Configure Firebase avant d'ajouter des données.");
-    return;
-  }
-
-  const payload = {
-    date: document.getElementById('f-date').value,
-    platform: state.formPlatform,
-    title: (document.getElementById('f-title').value || '').trim(),
-    views: Number(document.getElementById('f-views').value) || 0,
-    likes: Number(document.getElementById('f-likes').value) || 0,
-    comments: Number(document.getElementById('f-comments').value) || 0,
-    metricA: Number(document.getElementById('f-metricA').value) || 0,
-    metricB: Number(document.getElementById('f-metricB').value) || 0
-  };
-
-  const submitBtn = document.getElementById('submit-btn');
-  submitBtn.disabled = true;
-
-  try {
-    if (state.editingId) {
-      await updateDoc(doc(db, 'social_posts', state.editingId), payload);
-      cancelEdit();
-    } else {
-      await addDoc(postsCol(), { ...payload, createdAt: serverTimestamp() });
-      evt.target.reset();
-      document.getElementById('f-date').value = '';
-      setPlatform(state.formPlatform);
-    }
-  } catch (e) {
-    console.error(e);
-    alert("Impossible d'enregistrer cette publication pour le moment. Réessaie.");
-  } finally {
-    submitBtn.disabled = false;
-  }
-};
-
-window.editPost = function (id) {
-  const post = state.posts.find(p => p.id === id);
-  if (!post) return;
-  state.editingId = id;
-
-  document.getElementById('form-title').textContent = 'Modifier une publication';
-  document.getElementById('submit-btn').textContent = 'Enregistrer les modifications';
-  document.getElementById('cancel-edit-btn').classList.remove('hidden');
-
-  document.getElementById('f-date').value = post.date || '';
-  document.getElementById('f-title').value = post.title || '';
-  setPlatform(post.platform || 'instagram');
-  renderMetricsGrid(post);
-
-  window.scrollTo({ top: 0, behavior: 'smooth' });
-};
-
-window.cancelEdit = function () {
-  state.editingId = null;
-  document.getElementById('form-title').textContent = 'Ajouter une publication';
-  document.getElementById('submit-btn').textContent = 'Ajouter les performances';
-  document.getElementById('cancel-edit-btn').classList.add('hidden');
-  document.getElementById('post-form').reset();
-  document.getElementById('f-date').value = '';
-  setPlatform('instagram');
-};
-
-window.deletePost = async function (id) {
-  if (!confirm('Supprimer définitivement cette publication ?')) return;
-  try {
-    await deleteDoc(doc(db, 'social_posts', id));
-  } catch (e) {
-    console.error(e);
-    alert("Impossible de supprimer cette publication pour le moment.");
-  }
-};
-
-/* ============ METRICS HELPERS ============ */
-// Formule officielle : ((Likes + Commentaires + Partages/Reposts + Enregistrements) / Vues) * 100
-function num(v) { return typeof v === 'number' && !isNaN(v) ? v : 0; }
-function interactions(post) { return num(post.likes) + num(post.comments) + num(post.metricA) + num(post.metricB); }
-function likesComments(post) { return num(post.likes) + num(post.comments); }
-function engagementRate(post) { return num(post.views) > 0 ? (interactions(post) / num(post.views)) * 100 : 0; }
-
-function formatNumber(n) { return new Intl.NumberFormat('fr-FR').format(Math.round(num(n))); }
-function formatPercent(n) { return (n >= 0 ? '+' : '') + n.toFixed(1) + ' %'; }
-function escapeHtml(str) {
-  const div = document.createElement('div');
-  div.textContent = str ?? '';
-  return div.innerHTML;
-}
-function platformBadge(platform) {
-  const cfg = platformConfig(platform);
-  const isInsta = platform === 'instagram';
-  return `<span class="inline-flex items-center gap-1.5 text-xs font-semibold px-2 py-1 rounded-full ${isInsta ? 'bg-edo-orange/15 text-edo-orange' : 'bg-black/5 text-black'}">${cfg.label}</span>`;
-}
-
-/* ============ HISTORIQUE (Saisie view) ============ */
-function renderHistory() {
-  const tbody = document.getElementById('history-list');
-  const empty = document.getElementById('history-empty');
-  if (!tbody) return;
-  const sorted = [...state.posts].sort((a, b) => (b.date || '').localeCompare(a.date || ''));
-
-  if (sorted.length === 0) {
-    tbody.innerHTML = '';
-    empty.classList.remove('hidden');
-    return;
-  }
-  empty.classList.add('hidden');
-
-  tbody.innerHTML = sorted.map(p => `
-    <tr class="border-b border-edo-line last:border-0">
-      <td class="text-black/70 whitespace-nowrap">${escapeHtml(p.date || '—')}</td>
-      <td>${platformBadge(p.platform)}</td>
-      <td class="text-black/80">${escapeHtml(p.title || 'Sans titre')}</td>
-      <td class="text-black/70">${formatNumber(p.views)}</td>
-      <td class="text-black/70">${engagementRate(p).toFixed(1)} %</td>
-      <td class="whitespace-nowrap">
-        <button onclick="editPost('${p.id}')" class="text-edo-orange hover:underline text-xs font-semibold mr-3">Modifier</button>
-        <button onclick="deletePost('${p.id}')" class="text-black/30 hover:text-black/70 text-xs">Supprimer</button>
-      </td>
-    </tr>
-  `).join('');
-
-  replay('history-list');
-}
-
-/* ============ DATE RANGE ============ */
-function toISO(d) { return d.toISOString().slice(0, 10); }
-function addDays(d, days) { const nd = new Date(d); nd.setDate(nd.getDate() + days); return nd; }
-function todayDate() { const now = new Date(); return new Date(now.getFullYear(), now.getMonth(), now.getDate()); }
-
-function computeRangeDates() {
-  const today = todayDate();
-  if (state.range.type === '7d') return { start: toISO(addDays(today, -6)), end: toISO(today) };
-  if (state.range.type === '30d') return { start: toISO(addDays(today, -29)), end: toISO(today) };
-  return { start: state.range.start, end: state.range.end };
-}
-
-function computePreviousRangeDates(current) {
-  const start = new Date(current.start);
-  const end = new Date(current.end);
-  const lengthDays = Math.round((end - start) / 86400000) + 1;
-  const prevEnd = addDays(start, -1);
-  const prevStart = addDays(prevEnd, -(lengthDays - 1));
-  return { start: toISO(prevStart), end: toISO(prevEnd) };
-}
-
-window.setRange = function (type) {
-  state.range.type = type;
-  document.querySelectorAll('.range-btn').forEach(btn => { btn.dataset.active = (btn.dataset.range === type); });
-  document.getElementById('custom-range-bar').classList.toggle('hidden', type !== 'custom');
-  if (type !== 'custom') renderDashboard();
-};
-
-window.applyCustomRange = function () {
-  const start = document.getElementById('custom-start').value;
-  const end = document.getElementById('custom-end').value;
-  if (!start || !end || start > end) {
-    alert("Merci de sélectionner une période valide (date de début antérieure à la date de fin).");
-    return;
-  }
-  state.range.start = start;
-  state.range.end = end;
-  renderDashboard();
-};
-
-window.setSubview = function (subview) {
-  state.subview = subview;
-  document.querySelectorAll('.subview-btn').forEach(btn => { btn.dataset.active = (btn.dataset.subview === subview); });
-  renderDashboard();
-};
-
-function postsInDateRange(range) {
-  if (!range.start || !range.end) return [];
-  return state.posts.filter(p => p.date && p.date >= range.start && p.date <= range.end);
-}
-function filterByPlatform(posts, subview) {
-  if (subview === 'global') return posts;
-  return posts.filter(p => p.platform === subview);
-}
-
-/* ============ KPIs ============ */
-// Le taux d'engagement global est une MOYENNE PONDÉRÉE (interactions totales / vues totales),
-// jamais l'addition des pourcentages de chaque post.
-function computeKPIs(posts) {
-  const totalViews = posts.reduce((s, p) => s + num(p.views), 0);
-  const totalLikes = posts.reduce((s, p) => s + num(p.likes), 0);
-  const totalComments = posts.reduce((s, p) => s + num(p.comments), 0);
-  const totalInteractions = posts.reduce((s, p) => s + interactions(p), 0);
-  const avgEngagement = totalViews > 0 ? (totalInteractions / totalViews) * 100 : 0;
-  return { totalViews, totalLikes, totalComments, avgEngagement };
-}
-
-function evolutionLabel(current, previous) {
-  if (previous === 0) {
-    return current === 0
-      ? { text: 'Stable vs période préc.', cls: 'text-black/40' }
-      : { text: 'Nouveau vs période préc.', cls: 'text-edo-orange' };
-  }
-  const pct = ((current - previous) / previous) * 100;
-  const cls = pct >= 0 ? 'text-emerald-600' : 'text-red-500';
-  return { text: formatPercent(pct) + ' vs préc.', cls };
-}
-
-function setEvo(elId, current, previous) {
-  const evo = evolutionLabel(current, previous);
-  const el = document.getElementById(elId);
-  if (!el) return;
-  el.textContent = evo.text;
-  el.className = 'text-xs font-semibold mt-2 ' + evo.cls;
-}
-
-function renderKPIs(range, prevRange) {
-  const allCurrent = postsInDateRange(range);
-  const allPrevious = postsInDateRange(prevRange);
-
-  const currentPosts = filterByPlatform(allCurrent, state.subview);
-  const previousPosts = filterByPlatform(allPrevious, state.subview);
-
-  const cur = computeKPIs(currentPosts);
-  const prev = computeKPIs(previousPosts);
-
-  document.getElementById('kpi-views').textContent = formatNumber(cur.totalViews);
-  document.getElementById('kpi-likes').textContent = formatNumber(cur.totalLikes);
-  document.getElementById('kpi-comments').textContent = formatNumber(cur.totalComments);
-  document.getElementById('kpi-engagement').textContent = cur.avgEngagement.toFixed(1) + ' %';
-
-  setEvo('kpi-views-evo', cur.totalViews, prev.totalViews);
-  setEvo('kpi-likes-evo', cur.totalLikes, prev.totalLikes);
-  setEvo('kpi-comments-evo', cur.totalComments, prev.totalComments);
-  setEvo('kpi-engagement-evo', cur.avgEngagement, prev.avgEngagement);
-
-  const visibility = computeKPIs(allCurrent).totalViews;
-  document.getElementById('kpi-visibility').textContent = formatNumber(visibility);
-
-  replay('kpi-grid');
-  return currentPosts;
-}
-
-/* ============ CHART ============ */
-function renderLineChart(currentPosts) {
-  const canvas = document.getElementById('chart-line');
-  if (!canvas) return;
-  const dates = [...new Set(currentPosts.map(p => p.date).filter(Boolean))].sort();
-  const ctx = canvas.getContext('2d');
-  if (lineChart) { lineChart.destroy(); lineChart = null; }
-  if (dates.length === 0) return;
-
-  let datasets;
-  if (state.subview === 'global') {
-    datasets = [
-      { label: 'Instagram', data: dates.map(d => currentPosts.filter(p => p.date === d && p.platform === 'instagram').reduce((s, p) => s + num(p.views), 0)), borderColor: '#FFA200', backgroundColor: 'rgba(255,162,0,0.12)', fill: true, tension: 0.3, pointRadius: 3 },
-      { label: 'LinkedIn', data: dates.map(d => currentPosts.filter(p => p.date === d && p.platform === 'linkedin').reduce((s, p) => s + num(p.views), 0)), borderColor: '#000000', backgroundColor: 'rgba(0,0,0,0.05)', fill: true, tension: 0.3, pointRadius: 3 }
-    ];
-  } else {
-    const cfg = platformConfig(state.subview);
-    datasets = [{ label: cfg.label, data: dates.map(d => currentPosts.filter(p => p.date === d).reduce((s, p) => s + num(p.views), 0)), borderColor: cfg.color, backgroundColor: cfg.color === '#000000' ? 'rgba(0,0,0,0.05)' : 'rgba(255,162,0,0.12)', fill: true, tension: 0.3, pointRadius: 3 }];
-  }
-
-  try {
-    lineChart = new Chart(ctx, {
-      type: 'line',
-      data: { labels: dates, datasets },
-      options: {
-        responsive: true, maintainAspectRatio: false,
-        interaction: { mode: 'index', intersect: false },
-        plugins: { legend: { position: 'bottom', labels: { usePointStyle: true, boxWidth: 8, font: { family: 'Inter', size: 11 } } } },
-        scales: {
-          x: { grid: { display: false }, ticks: { font: { size: 10 } } },
-          y: { grid: { color: '#F0EFEC' }, ticks: { font: { size: 10 } } }
-        }
-      }
-    });
-  } catch (e) {
-    console.error('Erreur de rendu du graphique :', e);
-  }
-  replay('chart-wrapper');
-}
-
-/* ============ PALMARÈS ============ */
-function renderRanking(elId, posts, valueFn, formatFn) {
-  const el = document.getElementById(elId);
-  if (!el) return;
-  const top3 = [...posts].sort((a, b) => valueFn(b) - valueFn(a)).slice(0, 3);
-  if (top3.length === 0) {
-    el.innerHTML = '<p class="text-xs text-black/35">Pas assez de données sur cette période.</p>';
-    return;
-  }
-  el.innerHTML = top3.map((p, i) => `
-    <li class="flex items-center gap-3">
-      <span class="w-6 h-6 rounded-full flex items-center justify-center text-[11px] font-bold shrink-0 ${i === 0 ? 'kpi-accent text-black' : 'bg-black/5 text-black/60'}">${i + 1}</span>
-      <div class="min-w-0 flex-1">
-        <p class="text-sm text-black/80 truncate">${escapeHtml(p.title || 'Sans titre')}</p>
-        <p class="text-[11px] text-black/40">${platformConfig(p.platform).label} · ${escapeHtml(p.date || '—')}</p>
-      </div>
-      <span class="text-sm font-heading font-bold shrink-0">${formatFn(valueFn(p))}</span>
-    </li>
-  `).join('');
-}
-
-/* ============ TABLE (Dashboard) ============ */
-function renderDashboardTable(posts) {
-  const tbody = document.getElementById('dashboard-table');
-  const empty = document.getElementById('dashboard-empty');
-  if (!tbody) return;
-  const sorted = [...posts].sort((a, b) => (b.date || '').localeCompare(a.date || ''));
-
-  if (sorted.length === 0) {
-    tbody.innerHTML = '';
-    empty.classList.remove('hidden');
-    return;
-  }
-  empty.classList.add('hidden');
-
-  tbody.innerHTML = sorted.map(p => `
-    <tr class="border-b border-edo-line last:border-0">
-      <td class="text-black/70 whitespace-nowrap">${escapeHtml(p.date || '—')}</td>
-      <td>${platformBadge(p.platform)}</td>
-      <td class="text-black/80">${escapeHtml(p.title || 'Sans titre')}</td>
-      <td class="text-black/70">${formatNumber(p.views)}</td>
-      <td class="text-black/70">${formatNumber(interactions(p))}</td>
-      <td class="text-black/70 font-semibold">${engagementRate(p).toFixed(1)} %</td>
-    </tr>
-  `).join('');
-
-  replay('dashboard-table-wrapper');
-}
-
-/* ============ DASHBOARD ORCHESTRATION ============ */
-function renderDashboard() {
-  if (state.range.type === 'custom' && (!state.range.start || !state.range.end)) {
-    const today = todayDate();
-    document.getElementById('custom-start').value = toISO(addDays(today, -29));
-    document.getElementById('custom-end').value = toISO(today);
-    return;
-  }
-
-  const range = computeRangeDates();
-  const prevRange = computePreviousRangeDates(range);
-
-  const currentPosts = renderKPIs(range, prevRange);
-
-  renderLineChart(currentPosts);
-  renderRanking('ranking-engagement', currentPosts, engagementRate, v => v.toFixed(1) + ' %');
-  renderRanking('ranking-views', currentPosts, p => num(p.views), v => formatNumber(v));
-  renderRanking('ranking-interactions', currentPosts, likesComments, v => formatNumber(v));
-  renderDashboardTable(currentPosts);
-  replay('ranking-grid');
-}
-
-/* ============ CALENDRIER ============ */
-window.shiftMonth = function (delta) {
-  let m = state.calendar.month + delta;
-  let y = state.calendar.year;
-  if (m < 0) { m = 11; y -= 1; }
-  if (m > 11) { m = 0; y += 1; }
-  state.calendar.month = m;
-  state.calendar.year = y;
-  state.calendar.selectedDate = null;
-  renderCalendar();
-};
-
-const MONTH_NAMES = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'];
-
-function renderCalendar() {
-  if (state.calendar.year === null) {
-    const today = todayDate();
-    state.calendar.year = today.getFullYear();
-    state.calendar.month = today.getMonth();
-  }
-
-  const { year, month } = state.calendar;
-  const label = document.getElementById('cal-month-label');
-  if (label) label.textContent = MONTH_NAMES[month] + ' ' + year;
-
-  const firstOfMonth = new Date(year, month, 1);
-  const daysInMonth = new Date(year, month + 1, 0).getDate();
-  const leadOffset = (firstOfMonth.getDay() + 6) % 7; // lundi = 0
-
-  const cells = [];
-  for (let i = 0; i < leadOffset; i++) cells.push(null);
-  for (let d = 1; d <= daysInMonth; d++) cells.push(d);
-  while (cells.length % 7 !== 0) cells.push(null);
-
-  const grid = document.getElementById('cal-grid');
-  if (!grid) return;
-
-  grid.innerHTML = cells.map(d => {
-    if (d === null) return `<div class="cal-cell bg-white"></div>`;
-    const iso = `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
-    const dayPosts = state.posts.filter(p => p.date === iso);
-    const hasPost = dayPosts.length > 0;
-    const selected = state.calendar.selectedDate === iso;
-    const dots = dayPosts.slice(0, 6).map(p => `<span class="cal-dot ${p.platform === 'instagram' ? 'bg-edo-orange' : 'bg-black'}" title="${escapeHtml(p.title || '')}"></span>`).join('');
-    return `
-      <div class="cal-cell bg-white p-1.5 sm:p-2 flex flex-col gap-1.5" data-has-post="${hasPost}" data-selected="${selected}" onclick="${hasPost ? `selectCalDay('${iso}')` : ''}">
-        <span class="text-[11px] sm:text-xs text-black/50">${d}</span>
-        <div class="flex flex-wrap gap-1">${dots}</div>
-      </div>
-    `;
-  }).join('');
-
-  replay('cal-wrapper');
-
-  if (state.calendar.selectedDate) renderCalDayPanel(state.calendar.selectedDate);
-}
-
-window.selectCalDay = function (iso) {
-  state.calendar.selectedDate = (state.calendar.selectedDate === iso) ? null : iso;
-  renderCalendar();
-  if (state.calendar.selectedDate) renderCalDayPanel(state.calendar.selectedDate);
-  else document.getElementById('cal-day-panel').classList.add('hidden');
-};
-
-function renderCalDayPanel(iso) {
-  const panel = document.getElementById('cal-day-panel');
-  const dayPosts = state.posts.filter(p => p.date === iso);
-  panel.classList.remove('hidden');
-  document.getElementById('cal-day-title').textContent = 'Publications du ' + iso;
-  document.getElementById('cal-day-posts').innerHTML = dayPosts.map(p => `
-    <div class="flex items-center justify-between border border-edo-line rounded-lg px-3 py-2 gap-3">
-      <div class="flex items-center gap-2 min-w-0">
-        ${platformBadge(p.platform)}
-        <p class="text-sm text-black/80 truncate">${escapeHtml(p.title || 'Sans titre')}</p>
-      </div>
-      <span class="text-xs text-black/50 shrink-0">${formatNumber(p.views)} vues · ${engagementRate(p).toFixed(1)} %</span>
-    </div>
-  `).join('');
-}
-
-/* ============ QUÊTES & TÂCHES (Kanban) ============ */
-const TASK_STATUSES = ['idees', 'encours', 'valide'];
-
-window.handleTaskSubmit = async function (evt) {
-  evt.preventDefault();
-  if (!isConfigured || !db) {
-    alert("Configure Firebase avant d'ajouter une tâche.");
-    return;
-  }
-  const title = (document.getElementById('t-title').value || '').trim();
-  const assignee = (document.getElementById('t-assignee').value || '').trim();
-  const status = document.getElementById('t-status').value;
-
-  try {
-    await addDoc(tasksCol(), { title, assignee, status, createdAt: serverTimestamp() });
-    evt.target.reset();
-    document.getElementById('t-status').value = status;
-  } catch (e) {
-    console.error(e);
-    alert("Impossible de créer cette tâche pour le moment.");
-  }
-};
-
-window.deleteTask = async function (id) {
-  if (!confirm('Supprimer cette tâche ?')) return;
-  try {
-    await deleteDoc(doc(db, 'edo_tasks', id));
-  } catch (e) {
-    console.error(e);
-    alert("Impossible de supprimer cette tâche pour le moment.");
-  }
-};
-
-async function moveTask(id, newStatus) {
-  try {
-    await updateDoc(doc(db, 'edo_tasks', id), { status: newStatus });
-  } catch (e) {
-    console.error(e);
-    alert("Impossible de déplacer cette tâche pour le moment.");
-  }
-}
-
-window.handleTaskDragStart = function (evt, id) {
-  state.draggedTaskId = id;
-  evt.dataTransfer.effectAllowed = 'move';
-  try { evt.dataTransfer.setData('text/plain', id); } catch (e) {}
-  requestAnimationFrame(() => { evt.target.classList.add('dragging'); });
-};
-window.handleTaskDragEnd = function (evt) {
-  evt.target.classList.remove('dragging');
-  state.draggedTaskId = null;
-};
-window.handleColDragOver = function (evt) {
-  evt.preventDefault();
-  evt.currentTarget.dataset.dragover = 'true';
-};
-window.handleColDragLeave = function (evt) {
-  evt.currentTarget.dataset.dragover = 'false';
-};
-window.handleColDrop = function (evt, status) {
-  evt.preventDefault();
-  evt.currentTarget.dataset.dragover = 'false';
-  const id = state.draggedTaskId || (evt.dataTransfer ? evt.dataTransfer.getData('text/plain') : null);
-  if (!id) return;
-  const task = state.tasks.find(t => t.id === id);
-  if (task && task.status !== status) moveTask(id, status);
-};
-
-function initialsOf(name) {
-  const parts = (name || '?').trim().split(/\s+/);
-  return parts.slice(0, 2).map(p => p[0] ? p[0].toUpperCase() : '').join('') || '?';
-}
-
-function taskCardHtml(t) {
-  return `
-    <div class="kanban-card card-hover bg-white border border-edo-line rounded-xl p-3 shadow-sm" draggable="true"
-         ondragstart="handleTaskDragStart(event, '${t.id}')" ondragend="handleTaskDragEnd(event)">
-      <div class="flex items-start justify-between gap-2">
-        <p class="text-sm font-semibold text-black/80 leading-snug">${escapeHtml(t.title || 'Sans titre')}</p>
-        <button onclick="deleteTask('${t.id}')" class="text-black/25 hover:text-black/60 text-xs shrink-0" title="Supprimer">✕</button>
-      </div>
-      <div class="flex items-center gap-2 mt-2.5">
-        <span class="w-6 h-6 rounded-full bg-black text-white flex items-center justify-center text-[10px] font-heading font-bold shrink-0">${escapeHtml(initialsOf(t.assignee))}</span>
-        <span class="text-xs text-black/50 truncate">${escapeHtml(t.assignee || 'Non assigné')}</span>
-      </div>
-    </div>
-  `;
-}
-
-function renderKanban() {
-  TASK_STATUSES.forEach(status => {
-    const container = document.getElementById('col-' + status);
-    const countEl = document.getElementById('count-' + status);
-    if (!container) return;
-    const tasks = state.tasks.filter(t => t.status === status);
-    countEl.textContent = tasks.length;
-    if (tasks.length === 0) {
-      container.innerHTML = `<p class="text-xs text-black/35 text-center py-6">Colonne vide. Le silence avant le buzz.</p>`;
-      return;
-    }
-    container.innerHTML = tasks.map(taskCardHtml).join('');
-  });
-}
-
-/* ============ SWIPE FILE ============ */
-window.handleSwipeSubmit = async function (evt) {
-  evt.preventDefault();
-  if (!isConfigured || !db) {
-    alert("Configure Firebase avant d'ajouter une idée.");
-    return;
-  }
-  const url = (document.getElementById('f-swipe-url').value || '').trim();
-  const note = (document.getElementById('f-swipe-note').value || '').trim();
-
-  try {
-    await addDoc(swipeCol(), { url, note, createdAt: serverTimestamp() });
-    evt.target.reset();
-  } catch (e) {
-    console.error(e);
-    alert("Impossible d'enregistrer cette idée pour le moment.");
-  }
-};
-
-window.deleteSwipe = async function (id) {
-  if (!confirm('Supprimer cette idée de la veille ?')) return;
-  try {
-    await deleteDoc(doc(db, 'swipe_file', id));
-  } catch (e) {
-    console.error(e);
-    alert("Impossible de supprimer cette idée pour le moment.");
-  }
-};
-
-function renderSwipeGrid() {
-  const grid = document.getElementById('swipe-grid');
-  const empty = document.getElementById('swipe-empty');
-  if (!grid) return;
-
-  if (state.swipes.length === 0) {
-    grid.innerHTML = '';
-    empty.classList.remove('hidden');
-    return;
-  }
-  empty.classList.add('hidden');
-
-  grid.innerHTML = state.swipes.map(s => {
-    const dateLabel = s.createdAt && typeof s.createdAt.toDate === 'function' ? s.createdAt.toDate().toLocaleDateString('fr-FR') : '';
-    let host = s.url || '';
-    try { host = new URL(s.url).hostname.replace('www.', ''); } catch (e) {}
-    return `
-      <div class="card-hover bg-white border border-edo-line rounded-2xl p-4 flex flex-col gap-2 shadow-sm">
-        <a href="${escapeHtml(s.url)}" target="_blank" rel="noopener" class="text-sm font-semibold text-edo-orange hover:underline truncate">${escapeHtml(host)}</a>
-        <p class="text-sm text-black/70 leading-snug">${escapeHtml(s.note)}</p>
-        <div class="flex items-center justify-between mt-1">
-          <span class="text-[11px] text-black/35">${dateLabel}</span>
-          <button onclick="deleteSwipe('${s.id}')" class="text-[11px] text-black/30 hover:text-black/70">Supprimer</button>
-        </div>
-      </div>
-    `;
-  }).join('');
-
-  replay('swipe-grid');
-}
-
-/* ============ BRAND CENTER ============ */
-window.copyHex = function (hex, btnEl) {
-  const done = () => {
-    const fb = document.getElementById('copy-feedback');
-    fb.textContent = `Copié : ${hex}`;
-    fb.classList.remove('hidden');
-    clearTimeout(window.__copyFbTimeout);
-    window.__copyFbTimeout = setTimeout(() => fb.classList.add('hidden'), 1800);
-  };
-  if (navigator.clipboard && navigator.clipboard.writeText) {
-    navigator.clipboard.writeText(hex).then(done).catch(done);
-  } else {
-    done();
-  }
-};
-
-window.copyBio = function (elId, btnEl) {
-  const text = document.getElementById(elId).textContent;
-  const original = btnEl.textContent;
-  const flash = () => { btnEl.textContent = 'Copié !'; setTimeout(() => { btnEl.textContent = original; }, 1500); };
-  if (navigator.clipboard && navigator.clipboard.writeText) {
-    navigator.clipboard.writeText(text).then(flash).catch(flash);
-  } else {
-    flash();
-  }
-};
-
-window.downloadLogo = function () {
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="400" height="400" viewBox="0 0 400 400">
-  <defs>
-    <linearGradient id="edoGrad" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0%" stop-color="#FFA200"/>
-      <stop offset="100%" stop-color="#FFC300"/>
-    </linearGradient>
-  </defs>
-  <rect width="400" height="400" rx="48" fill="url(#edoGrad)"/>
-  <text x="200" y="235" font-family="Montserrat, Arial, sans-serif" font-weight="900" font-size="120" fill="#000000" text-anchor="middle">EDO</text>
-</svg>`;
-  const blob = new Blob([svg], { type: 'image/svg+xml' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = 'edo-logo.svg';
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  setTimeout(() => URL.revokeObjectURL(url), 2000);
-};
-
-/* ============ INIT ============ */
-function init() {
-  const dateField = document.getElementById('f-date');
-  if (dateField) dateField.value = toISO(todayDate());
-  renderMetricsGrid();
-  renderFollowers();
-}
-
-init();
-</script>
+<script type="module" src="app.js"></script>
 </body>
 </html>
