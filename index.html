@@ -4,12 +4,23 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
 <title>EDO // COMMAND</title>
+<script>
+  // Applique le thème AVANT le premier rendu pour éviter le flash (FOUC).
+  (function () {
+    try {
+      var t = localStorage.getItem('edo-theme');
+      if (t === 'light') document.documentElement.classList.remove('dark');
+      else document.documentElement.classList.add('dark');
+    } catch (e) { document.documentElement.classList.add('dark'); }
+  })();
+</script>
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@600;700;800;900&family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet" />
 <script src="https://cdn.tailwindcss.com"></script>
 <script>
   tailwind.config = {
+    darkMode: 'class',
     theme: {
       extend: {
         colors: {
@@ -87,24 +98,44 @@
   <div class="grid-bg fixed inset-0 pointer-events-none z-0"></div>
 
   <!-- SIDEBAR -->
-  <aside class="hidden md:flex w-72 shrink-0 bg-black/80 backdrop-blur text-white flex-col justify-between fixed inset-y-0 left-0 z-30 border-r border-edo-orange/15">
+  <aside class="hidden md:flex w-72 shrink-0 bg-black/90 backdrop-blur text-white flex-col justify-between fixed inset-y-0 left-0 z-30 border-r border-edo-orange/15">
     <div class="overflow-y-auto">
       <div class="px-6 pt-8 pb-6">
         <p class="font-heading font-black text-lg tracking-[0.12em] leading-none">EDO<span class="text-gradient">//</span>COMMAND</p>
         <p class="text-[10px] text-white/35 font-mono mt-1.5 tracking-widest uppercase">Centre de contrôle</p>
       </div>
 
-      <div class="mx-4 mb-6 hud-panel hud-panel-xp px-4 py-3.5">
-        <div class="flex items-center justify-between mb-2">
-          <span id="level-label" class="text-[11px] font-heading font-bold text-edo-orange tracking-widest">NIVEAU 1</span>
+      <!-- PROFIL JOUEUR -->
+      <div class="mx-4 mb-6 hud-panel hud-panel-xp px-4 py-4">
+        <div class="flex items-center justify-between gap-2">
+          <div class="min-w-0 flex-1">
+            <p id="profile-pseudo" class="font-heading font-bold text-sm text-white truncate">—</p>
+            <p id="profile-title" class="text-[10px] text-edo-orange font-mono tracking-wide truncate">—</p>
+          </div>
+          <button onclick="toggleProfilePanel()" title="Modifier mon profil" class="w-6 h-6 shrink-0 flex items-center justify-center rounded border border-white/15 hover:border-edo-orange/60 text-white/50 hover:text-edo-orange">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 3a2.85 2.85 0 114 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>
+          </button>
+        </div>
+        <div class="flex items-center justify-between mt-3 mb-1.5">
+          <span id="level-label" class="text-[11px] font-heading font-bold text-white tracking-widest">NIVEAU 1</span>
           <span id="streak-label" class="text-[10px] text-white/40 font-mono">🔥 0J</span>
         </div>
         <div class="xp-track h-1.5 overflow-hidden"><div id="xp-fill" class="xp-fill h-full" style="width:0%"></div></div>
+        <p id="xp-caption" class="text-[9px] text-white/30 font-mono mt-1.5">0 / 100 XP</p>
+      </div>
+
+      <div id="profile-panel" class="hidden mx-4 mb-4 hud-panel px-4 py-3.5 space-y-2.5">
+        <label class="hud-label !mb-1">Pseudo</label>
+        <input type="text" id="f-pseudo" maxlength="24" class="hud-input w-full !text-white" />
+        <button onclick="savePseudo()" class="hud-btn-primary w-full py-2 text-xs mt-1">Enregistrer</button>
       </div>
 
       <nav class="flex flex-col gap-1 px-3">
         <button class="nav-btn" data-tab="dashboard" data-active="true" onclick="switchTab('dashboard')">
           <span class="nav-label"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18M7 15l4-4 3 3 5-6"/></svg>Dashboard RS</span>
+        </button>
+        <button class="nav-btn" data-tab="arene" data-active="false" onclick="switchTab('arene')">
+          <span class="nav-label"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6.5 6.5l11 11M17.5 6.5l-11 11M4 4l3 1 1 3M20 4l-3 1-1 3M4 20l3-1 1-3M20 20l-3-1-1-3"/></svg>Arène / Objectifs</span>
         </button>
         <button class="nav-btn" data-tab="calendrier" data-active="false" onclick="switchTab('calendrier')">
           <span class="nav-label"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 3v3M16 3v3"/></svg>Calendrier suivi</span>
@@ -146,45 +177,64 @@
       ⚠️ Config Firebase vide — complète l'objet <code class="font-mono text-xs">firebaseConfig</code> en haut de app.js avant de déployer.
     </div>
 
-    <!-- HEADER -->
-    <div class="hud-header sticky top-0 z-20 flex items-center justify-between gap-3 px-4 md:px-8 py-3.5 flex-wrap">
-      <div class="min-w-0">
-        <p class="text-[10px] font-mono text-edo-orange/60 tracking-widest uppercase flex items-center gap-1.5 flex-wrap">
-          <span>EDO//COMMAND</span><span class="text-white/20">/</span>
-          <span id="breadcrumb-current" class="text-white/70">Dashboard RS</span>
-        </p>
-        <p id="breadcrumb-sub" class="font-heading font-bold text-sm sm:text-base text-white truncate">Le pouls de la communication EDO</p>
+    <div class="sticky top-0 z-20">
+      <!-- BOSS BAR -->
+      <div class="boss-bar px-4 md:px-8 py-3">
+        <div class="flex items-center justify-between gap-3 mb-1.5 flex-wrap">
+          <p class="font-heading font-black text-xs sm:text-sm text-white tracking-widest uppercase flex items-center gap-2">
+            <span>👹</span><span id="boss-name">BOSS DU MOIS</span>
+          </p>
+          <p id="boss-hp-label" class="font-mono text-[11px] text-white/70">— / —</p>
+        </div>
+        <div class="boss-hp-track h-5 sm:h-6 overflow-hidden">
+          <div id="boss-hp-fill" class="boss-hp-fill h-full" style="width:0%"></div>
+        </div>
       </div>
 
-      <div class="flex items-center gap-3 sm:gap-5 flex-wrap">
-        <div class="flex items-center gap-3 sm:gap-4 font-mono">
-          <div class="flex items-center gap-1.5">
-            <span class="w-1.5 h-1.5 rounded-full bg-white shrink-0"></span>
-            <p id="followers-linkedin" class="font-bold text-sm text-white">—</p>
-            <span class="text-[9px] text-white/35 hidden sm:inline">IN</span>
-          </div>
-          <div class="flex items-center gap-1.5">
-            <span class="w-1.5 h-1.5 rounded-full bg-edo-orange shrink-0"></span>
-            <p id="followers-instagram" class="font-bold text-sm text-white">—</p>
-            <span class="text-[9px] text-white/35 hidden sm:inline">IG</span>
-          </div>
-          <button onclick="toggleFollowersPanel()" title="Modifier les compteurs" class="w-6 h-6 flex items-center justify-center rounded border border-white/15 hover:border-edo-orange/60 text-white/60 hover:text-edo-orange md:transition-colors">
-            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 3a2.85 2.85 0 114 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>
-          </button>
+      <!-- HEADER -->
+      <div class="hud-header flex items-center justify-between gap-3 px-4 md:px-8 py-3.5 flex-wrap">
+        <div class="min-w-0">
+          <p class="text-[10px] font-mono text-edo-orange/60 tracking-widest uppercase flex items-center gap-1.5 flex-wrap">
+            <span>EDO//COMMAND</span><span class="opacity-30">/</span>
+            <span id="breadcrumb-current" class="opacity-70">Dashboard RS</span>
+          </p>
+          <p id="breadcrumb-sub" class="font-heading font-bold text-sm sm:text-base truncate">Le pouls de la communication EDO</p>
         </div>
-        <div class="w-px h-6 bg-white/10 hidden sm:block"></div>
-        <div class="flex items-center gap-2">
-          <a href="https://www.linkedin.com/company/88877449/admin/page-posts/published/" target="_blank" rel="noopener" title="LinkedIn" class="w-7 h-7 flex items-center justify-center rounded bg-white text-black hover:bg-edo-orange md:transition-colors">
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M20.45 20.45h-3.55v-5.57c0-1.33-.02-3.03-1.85-3.03-1.85 0-2.14 1.45-2.14 2.94v5.66H9.36V9h3.41v1.56h.05c.47-.9 1.63-1.85 3.37-1.85 3.6 0 4.27 2.37 4.27 5.45v6.29zM5.34 7.43a2.06 2.06 0 110-4.12 2.06 2.06 0 010 4.12zM7.11 20.45H3.56V9h3.55v11.45z"/></svg>
-          </a>
-          <a href="https://www.instagram.com/edo_campus" target="_blank" rel="noopener" title="Instagram" class="w-7 h-7 flex items-center justify-center rounded text-black hover:brightness-110 md:transition-all" style="background:linear-gradient(135deg,#FFA200,#FFC300)">
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#000" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.2" cy="6.8" r="1"/></svg>
-          </a>
+
+        <div class="flex items-center gap-3 sm:gap-5 flex-wrap">
+          <div class="flex items-center gap-3 sm:gap-4 font-mono">
+            <div class="flex items-center gap-1.5">
+              <span class="w-1.5 h-1.5 rounded-full bg-current shrink-0 opacity-70"></span>
+              <p id="followers-linkedin" class="font-bold text-sm">—</p>
+              <span class="text-[9px] opacity-40 hidden sm:inline">IN</span>
+            </div>
+            <div class="flex items-center gap-1.5">
+              <span class="w-1.5 h-1.5 rounded-full bg-edo-orange shrink-0"></span>
+              <p id="followers-instagram" class="font-bold text-sm">—</p>
+              <span class="text-[9px] opacity-40 hidden sm:inline">IG</span>
+            </div>
+            <button onclick="toggleFollowersPanel()" title="Modifier les compteurs" class="w-6 h-6 flex items-center justify-center rounded border border-current/15 hover:border-edo-orange/60 opacity-60 hover:opacity-100 hover:text-edo-orange md:transition-colors">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 3a2.85 2.85 0 114 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>
+            </button>
+          </div>
+          <div class="w-px h-6 bg-current/10 hidden sm:block"></div>
+          <div class="flex items-center gap-2">
+            <a href="https://www.linkedin.com/company/88877449/admin/page-posts/published/" target="_blank" rel="noopener" title="LinkedIn" class="w-7 h-7 flex items-center justify-center rounded bg-black text-white hover:bg-edo-orange md:transition-colors">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M20.45 20.45h-3.55v-5.57c0-1.33-.02-3.03-1.85-3.03-1.85 0-2.14 1.45-2.14 2.94v5.66H9.36V9h3.41v1.56h.05c.47-.9 1.63-1.85 3.37-1.85 3.6 0 4.27 2.37 4.27 5.45v6.29zM5.34 7.43a2.06 2.06 0 110-4.12 2.06 2.06 0 010 4.12zM7.11 20.45H3.56V9h3.55v11.45z"/></svg>
+            </a>
+            <a href="https://www.instagram.com/edo_campus" target="_blank" rel="noopener" title="Instagram" class="w-7 h-7 flex items-center justify-center rounded text-black hover:brightness-110 md:transition-all" style="background:linear-gradient(135deg,#FFA200,#FFC300)">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#000" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.2" cy="6.8" r="1"/></svg>
+            </a>
+            <button onclick="toggleTheme()" title="Basculer thème clair / sombre" class="w-7 h-7 flex items-center justify-center rounded border border-current/15 hover:border-edo-orange/60 hover:text-edo-orange md:transition-colors">
+              <svg id="theme-icon-sun" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+              <svg id="theme-icon-moon" class="hidden" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.8A9 9 0 1111.2 3 7 7 0 0021 12.8z"/></svg>
+            </button>
+          </div>
         </div>
       </div>
     </div>
 
-    <div id="followers-panel" class="hidden px-4 md:px-8 py-3 bg-black/40 border-b border-edo-orange/15 flex items-center gap-3 flex-wrap">
+    <div id="followers-panel" class="hidden px-4 md:px-8 py-3 hud-subbar flex items-center gap-3 flex-wrap">
       <label class="hud-label !mb-0">LinkedIn</label>
       <input type="number" min="0" id="f-followers-linkedin" class="hud-input w-24" />
       <label class="hud-label !mb-0">Instagram</label>
@@ -196,13 +246,22 @@
     <section id="view-dashboard" class="view" data-visible="true">
       <div class="w-full px-4 md:px-8 py-8 md:py-10">
 
+        <!-- QUÊTES JOURNALIÈRES -->
+        <div class="hud-panel p-5 mb-8">
+          <div class="flex items-center justify-between flex-wrap gap-2 mb-3">
+            <p class="font-heading font-bold text-sm">🗒️ Quêtes journalières</p>
+            <p id="daily-date-label" class="text-[10px] font-mono opacity-40"></p>
+          </div>
+          <div id="daily-quests-list" class="space-y-2.5"></div>
+        </div>
+
         <div class="flex items-center justify-between flex-wrap gap-3">
           <button id="toggle-form-btn" onclick="toggleForm()" class="hud-btn-primary px-5 py-3">+ AJOUTER UNE PUBLICATION</button>
           <button onclick="exportPostsCSV()" class="hud-btn-ghost px-5 py-3">⬇ EXPORTER EN CSV</button>
         </div>
 
         <form id="post-form" class="hidden hud-panel mt-4 p-5 md:p-6 space-y-6">
-          <p id="form-title" class="font-heading font-bold text-lg text-white">Ajouter une publication</p>
+          <p id="form-title" class="font-heading font-bold text-lg">Ajouter une publication</p>
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
             <div><label class="hud-label">Date du post</label><input required type="date" id="f-date" class="hud-input w-full" /></div>
             <div>
@@ -243,15 +302,15 @@
           <div class="hud-panel hud-kpi p-4"><p class="hud-kpi-label">Total des vues</p><p id="kpi-views" class="hud-kpi-value">—</p><p id="kpi-views-evo" class="hud-kpi-evo"></p></div>
           <div class="hud-panel hud-kpi p-4"><p class="hud-kpi-label">Total des likes</p><p id="kpi-likes" class="hud-kpi-value">—</p><p id="kpi-likes-evo" class="hud-kpi-evo"></p></div>
           <div class="hud-panel hud-kpi p-4"><p class="hud-kpi-label">Total des commentaires</p><p id="kpi-comments" class="hud-kpi-value">—</p><p id="kpi-comments-evo" class="hud-kpi-evo"></p></div>
-          <div class="hud-panel hud-kpi p-4"><p class="hud-kpi-label">Visibilité globale</p><p id="kpi-visibility" class="hud-kpi-value">—</p><p class="text-[10px] text-white/30 mt-1.5">Vues cumulées LinkedIn + Instagram</p></div>
+          <div class="hud-panel hud-kpi p-4"><p class="hud-kpi-label">Visibilité globale</p><p id="kpi-visibility" class="hud-kpi-value">—</p><p class="text-[10px] opacity-30 mt-1.5">Vues cumulées LinkedIn + Instagram</p></div>
           <div class="hud-panel hud-kpi p-4"><p class="hud-kpi-label">Engagement moyen</p><p id="kpi-engagement" class="hud-kpi-value">—</p><p id="kpi-engagement-evo" class="hud-kpi-evo"></p></div>
         </div>
 
         <div id="chart-wrapper" class="fade-target hud-panel mt-6 p-4 md:p-5">
           <div class="flex items-center justify-between flex-wrap gap-3 mb-3">
             <div>
-              <p class="font-heading font-semibold text-sm text-white" id="chart-title">Évolution des vues</p>
-              <p class="text-xs text-white/35">Sur la période et la vue sélectionnées</p>
+              <p class="font-heading font-semibold text-sm" id="chart-title">Évolution des vues</p>
+              <p class="text-xs opacity-35">Sur la période et la vue sélectionnées</p>
             </div>
             <div class="hud-tabbar">
               <button class="metric-btn" data-active="true" data-metric="views" onclick="setChartMetric('views')"><span class="metric-inner">Vues</span></button>
@@ -263,22 +322,49 @@
           <div class="h-64 md:h-80"><canvas id="chart-line"></canvas></div>
         </div>
 
-        <p class="font-heading font-semibold text-lg mt-8 text-white">Palmarès <span class="text-white/30 text-sm font-medium">— le tableau des scores</span></p>
+        <p class="font-heading font-semibold text-lg mt-8">Palmarès <span class="opacity-30 text-sm font-medium">— le tableau des scores</span></p>
         <div id="ranking-grid" class="fade-target grid grid-cols-1 md:grid-cols-3 gap-5 mt-3">
-          <div class="hud-panel p-5"><p class="font-heading font-semibold text-sm text-white">Top 3 — Engagement</p><ol id="ranking-engagement" class="mt-3 space-y-2"></ol></div>
-          <div class="hud-panel p-5"><p class="font-heading font-semibold text-sm text-white">Top 3 — Vues</p><ol id="ranking-views" class="mt-3 space-y-2"></ol></div>
-          <div class="hud-panel p-5"><p class="font-heading font-semibold text-sm text-white">Top 3 — Interactions</p><p class="text-[11px] text-white/30 -mt-1">Likes + commentaires</p><ol id="ranking-interactions" class="mt-3 space-y-2"></ol></div>
+          <div class="hud-panel p-5"><p class="font-heading font-semibold text-sm">Top 3 — Engagement</p><ol id="ranking-engagement" class="mt-3 space-y-2"></ol></div>
+          <div class="hud-panel p-5"><p class="font-heading font-semibold text-sm">Top 3 — Vues</p><ol id="ranking-views" class="mt-3 space-y-2"></ol></div>
+          <div class="hud-panel p-5"><p class="font-heading font-semibold text-sm">Top 3 — Interactions</p><p class="text-[11px] opacity-30 -mt-1">Likes + commentaires</p><ol id="ranking-interactions" class="mt-3 space-y-2"></ol></div>
         </div>
 
-        <p class="font-heading font-semibold text-sm text-white/70 mt-8 mb-3">Historique des publications</p>
+        <p class="font-heading font-semibold text-sm opacity-70 mt-8 mb-3">Historique des publications</p>
         <div id="dashboard-table-wrapper" class="fade-target hud-panel overflow-x-auto">
           <table class="hud-table w-full text-sm min-w-[620px]">
             <thead><tr><th>Date</th><th>Plateforme</th><th>Titre</th><th>Vues</th><th>Interactions</th><th>Engagement</th><th></th></tr></thead>
             <tbody id="dashboard-table"></tbody>
           </table>
           <div id="dashboard-empty" class="hidden px-4 py-10 text-center">
-            <p class="text-sm font-semibold text-white/50">Aucun post ici… l'algorithme pleure.</p>
-            <p class="text-xs text-white/25 mt-1">Ajoute ta première publication pour le consoler.</p>
+            <p class="text-sm font-semibold opacity-50">Aucun post ici… l'algorithme pleure.</p>
+            <p class="text-xs opacity-25 mt-1">Ajoute ta première publication pour le consoler.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- VIEW: ARÈNE / OBJECTIFS -->
+    <section id="view-arene" class="view" data-visible="false">
+      <div class="w-full px-4 md:px-8 py-8 md:py-10 max-w-4xl">
+        <p class="font-heading font-bold text-2xl">Arène / Objectifs</p>
+        <p class="text-sm opacity-40 mt-1">Configure le Boss du mois et consulte le tableau de chasse.</p>
+
+        <form id="boss-form" class="mt-6 hud-panel p-5 flex flex-col sm:flex-row items-stretch sm:items-end gap-3">
+          <div class="flex-1">
+            <label class="hud-label">PV du Boss (objectif de vues du mois en cours)</label>
+            <input required type="number" min="1" id="boss-target" placeholder="Ex : 50000" class="hud-input w-full" />
+          </div>
+          <button type="submit" class="hud-btn-primary px-5 py-2.5 shrink-0">METTRE À JOUR LE BOSS</button>
+        </form>
+
+        <p class="font-heading font-semibold text-lg mt-8">Tableau de chasse <span class="opacity-30 text-sm font-medium">— historique des mois</span></p>
+        <div id="boss-history" class="mt-4 hud-panel overflow-x-auto">
+          <table class="hud-table w-full text-sm min-w-[480px]">
+            <thead><tr><th>Mois</th><th>Objectif</th><th>Vues obtenues</th><th>Résultat</th></tr></thead>
+            <tbody id="boss-history-body"></tbody>
+          </table>
+          <div id="boss-history-empty" class="hidden px-4 py-10 text-center">
+            <p class="text-sm font-semibold opacity-50">Aucun Boss configuré pour l'instant.</p>
           </div>
         </div>
       </div>
@@ -287,18 +373,18 @@
     <!-- VIEW: CALENDRIER SUIVI -->
     <section id="view-calendrier" class="view" data-visible="false">
       <div class="w-full px-4 md:px-8 py-8 md:py-10">
-        <p class="font-heading font-bold text-2xl text-white">Calendrier de suivi</p>
-        <p class="text-sm text-white/40 mt-1">Fréquence de publication réelle, LinkedIn &amp; Instagram.</p>
+        <p class="font-heading font-bold text-2xl">Calendrier de suivi</p>
+        <p class="text-sm opacity-40 mt-1">Fréquence de publication réelle, LinkedIn &amp; Instagram.</p>
 
         <div class="flex items-center justify-between mt-6 max-w-xl">
           <button onclick="shiftMonth(-1)" class="hud-btn-ghost w-9 h-9 !p-0 flex items-center justify-center"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg></button>
-          <p id="cal-month-label" class="font-heading font-bold text-base text-white"></p>
+          <p id="cal-month-label" class="font-heading font-bold text-base"></p>
           <button onclick="shiftMonth(1)" class="hud-btn-ghost w-9 h-9 !p-0 flex items-center justify-center"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg></button>
         </div>
 
-        <div class="flex items-center gap-4 mt-4 text-xs text-white/40 font-mono">
+        <div class="flex items-center gap-4 mt-4 text-xs opacity-40 font-mono">
           <span class="flex items-center gap-1.5"><span class="cal-dot bg-edo-orange"></span>INSTAGRAM</span>
-          <span class="flex items-center gap-1.5"><span class="cal-dot bg-white"></span>LINKEDIN</span>
+          <span class="flex items-center gap-1.5"><span class="cal-dot cal-dot-neutral"></span>LINKEDIN</span>
         </div>
 
         <div id="cal-wrapper" class="fade-target grid grid-cols-7 gap-px mt-3 hud-cal-grid max-w-5xl">
@@ -307,7 +393,7 @@
         </div>
 
         <div id="cal-day-panel" class="hidden anim-fade-up mt-5 hud-panel p-5 max-w-2xl">
-          <p id="cal-day-title" class="font-heading font-semibold text-sm text-white"></p>
+          <p id="cal-day-title" class="font-heading font-semibold text-sm"></p>
           <div id="cal-day-posts" class="mt-3 space-y-2"></div>
         </div>
       </div>
@@ -316,8 +402,8 @@
     <!-- VIEW: CALENDRIER ÉDITO -->
     <section id="view-edito" class="view" data-visible="false">
       <div class="w-full px-4 md:px-8 py-8 md:py-10">
-        <p class="font-heading font-bold text-2xl text-white">Calendrier édito</p>
-        <p class="text-sm text-white/40 mt-1">Anticipe tes publications avant qu'elles ne partent en prod.</p>
+        <p class="font-heading font-bold text-2xl">Calendrier édito</p>
+        <p class="text-sm opacity-40 mt-1">Anticipe tes publications avant qu'elles ne partent en prod.</p>
 
         <button id="toggle-edito-form-btn" onclick="toggleEditoForm()" class="hud-btn-primary px-5 py-3 mt-5">+ PLANIFIER UN POST</button>
 
@@ -342,7 +428,7 @@
 
         <div id="edito-list" class="mt-8 space-y-3"></div>
         <div id="edito-empty" class="hidden text-center mt-10">
-          <p class="text-sm font-semibold text-white/50">Le planning est vide. La créativité attend son moment.</p>
+          <p class="text-sm font-semibold opacity-50">Le planning est vide. La créativité attend son moment.</p>
         </div>
       </div>
     </section>
@@ -350,8 +436,8 @@
     <!-- VIEW: BANQUE D'IDÉES -->
     <section id="view-idees" class="view" data-visible="false">
       <div class="w-full px-4 md:px-8 py-8 md:py-10 max-w-5xl">
-        <p class="font-heading font-bold text-2xl text-white">Banque d'idées</p>
-        <p class="text-sm text-white/40 mt-1">La veille créative partagée par l'équipe.</p>
+        <p class="font-heading font-bold text-2xl">Banque d'idées</p>
+        <p class="text-sm opacity-40 mt-1">La veille créative partagée par l'équipe.</p>
 
         <form id="swipe-form" class="mt-6 hud-panel p-5 md:p-6 space-y-4">
           <div><label class="hud-label">URL du post inspirant</label><input required type="url" id="f-swipe-url" placeholder="https://www.instagram.com/p/…" class="hud-input w-full" /></div>
@@ -361,8 +447,8 @@
 
         <div id="swipe-grid" class="fade-target grid grid-cols-1 sm:grid-cols-2 gap-4 mt-8"></div>
         <div id="swipe-empty" class="hidden text-center mt-8">
-          <p class="text-sm font-semibold text-white/50">Le mood board est vide.</p>
-          <p class="text-xs text-white/25 mt-1">Sois le·la premier·ère à ajouter une idée.</p>
+          <p class="text-sm font-semibold opacity-50">Le mood board est vide.</p>
+          <p class="text-xs opacity-25 mt-1">Sois le·la premier·ère à ajouter une idée.</p>
         </div>
       </div>
     </section>
@@ -370,8 +456,8 @@
     <!-- VIEW: AMBASSADEURS -->
     <section id="view-ambassadeurs" class="view" data-visible="false">
       <div class="w-full px-4 md:px-8 py-8 md:py-10">
-        <p class="font-heading font-bold text-2xl text-white">Ambassadeurs</p>
-        <p class="text-sm text-white/40 mt-1">Le classement de ceux qui portent la voix d'EDO Campus.</p>
+        <p class="font-heading font-bold text-2xl">Ambassadeurs</p>
+        <p class="text-sm opacity-40 mt-1">Le classement de ceux qui portent la voix d'EDO Campus.</p>
 
         <form id="ambassador-form" class="mt-6 hud-panel p-5 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 items-end">
           <div><label class="hud-label">Prénom</label><input required type="text" id="amb-firstname" class="hud-input w-full" /></div>
@@ -382,14 +468,14 @@
         </form>
 
         <div class="mt-6 relative max-w-sm">
-          <svg class="absolute left-3 top-1/2 -translate-y-1/2 text-white/30" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+          <svg class="absolute left-3 top-1/2 -translate-y-1/2 opacity-30" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
           <input type="text" id="amb-search" placeholder="Rechercher un nom, un prénom…" class="hud-input w-full pl-9" oninput="renderAmbassadors()" />
         </div>
 
         <div id="ambassador-list" class="mt-6 space-y-3"></div>
         <div id="ambassador-empty" class="hidden text-center mt-10">
-          <p class="text-sm font-semibold text-white/50">Le podium est vide.</p>
-          <p class="text-xs text-white/25 mt-1">Recrute ton premier ambassadeur ci-dessus.</p>
+          <p class="text-sm font-semibold opacity-50">Le podium est vide.</p>
+          <p class="text-xs opacity-25 mt-1">Recrute ton premier ambassadeur ci-dessus.</p>
         </div>
       </div>
     </section>
@@ -397,8 +483,8 @@
     <!-- VIEW: QUÊTES -->
     <section id="view-taches" class="view" data-visible="false">
       <div class="w-full px-4 md:px-8 py-8 md:py-10">
-        <p class="font-heading font-bold text-2xl text-white">Quêtes</p>
-        <p class="text-sm text-white/40 mt-1">Le kanban de l'équipe. Glisse-dépose pour faire avancer la quête.</p>
+        <p class="font-heading font-bold text-2xl">Quêtes</p>
+        <p class="text-sm opacity-40 mt-1">Le kanban de l'équipe. Glisse-dépose pour faire avancer la quête.</p>
 
         <form id="task-form" class="mt-6 hud-panel p-4 md:p-5 flex flex-col sm:flex-row items-stretch sm:items-end gap-3">
           <div class="flex-1"><label class="hud-label">Titre de la tâche</label><input required type="text" id="t-title" placeholder="Ex : Storyboard reel rentrée" class="hud-input w-full" /></div>
@@ -436,16 +522,16 @@
     <!-- VIEW: BRAND CENTER -->
     <section id="view-brand" class="view" data-visible="false">
       <div class="w-full px-4 md:px-8 py-8 md:py-10">
-        <p class="font-heading font-bold text-2xl text-white">Brand Center</p>
-        <p class="text-sm text-white/40 mt-1">La palette officielle. Clique sur une couleur pour copier son code hex.</p>
+        <p class="font-heading font-bold text-2xl">Brand Center</p>
+        <p class="text-sm opacity-40 mt-1">La palette officielle. Clique sur une couleur pour copier son code hex.</p>
 
         <div class="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-4 mt-6">
-          <button class="swatch hud-panel text-left overflow-hidden" onclick="copyHex('#000000')"><div class="h-20" style="background:#000000"></div><div class="px-3 py-2.5"><p class="text-xs font-semibold text-white">Noir</p><p class="text-[11px] text-white/40 font-mono">#000000</p></div></button>
-          <button class="swatch hud-panel text-left overflow-hidden" onclick="copyHex('#0B0B0C')"><div class="h-20" style="background:#0B0B0C"></div><div class="px-3 py-2.5"><p class="text-xs font-semibold text-white">Ink</p><p class="text-[11px] text-white/40 font-mono">#0B0B0C</p></div></button>
-          <button class="swatch hud-panel text-left overflow-hidden" onclick="copyHex('#FFA200')"><div class="h-20" style="background:#FFA200"></div><div class="px-3 py-2.5"><p class="text-xs font-semibold text-white">Orange</p><p class="text-[11px] text-white/40 font-mono">#FFA200</p></div></button>
-          <button class="swatch hud-panel text-left overflow-hidden" onclick="copyHex('#FFC300')"><div class="h-20" style="background:#FFC300"></div><div class="px-3 py-2.5"><p class="text-xs font-semibold text-white">Yellow</p><p class="text-[11px] text-white/40 font-mono">#FFC300</p></div></button>
-          <button class="swatch hud-panel text-left overflow-hidden" onclick="copyHex('#FFFFFF')"><div class="h-20" style="background:#FFFFFF"></div><div class="px-3 py-2.5"><p class="text-xs font-semibold text-white">Blanc</p><p class="text-[11px] text-white/40 font-mono">#FFFFFF</p></div></button>
-          <button class="swatch hud-panel text-left overflow-hidden" onclick="copyHex('#FAFAF9')"><div class="h-20" style="background:#FAFAF9"></div><div class="px-3 py-2.5"><p class="text-xs font-semibold text-white">Paper</p><p class="text-[11px] text-white/40 font-mono">#FAFAF9</p></div></button>
+          <button class="swatch hud-panel text-left overflow-hidden" onclick="copyHex('#000000')"><div class="h-20" style="background:#000000"></div><div class="px-3 py-2.5"><p class="text-xs font-semibold">Noir</p><p class="text-[11px] opacity-40 font-mono">#000000</p></div></button>
+          <button class="swatch hud-panel text-left overflow-hidden" onclick="copyHex('#0B0B0C')"><div class="h-20" style="background:#0B0B0C"></div><div class="px-3 py-2.5"><p class="text-xs font-semibold">Ink</p><p class="text-[11px] opacity-40 font-mono">#0B0B0C</p></div></button>
+          <button class="swatch hud-panel text-left overflow-hidden" onclick="copyHex('#FFA200')"><div class="h-20" style="background:#FFA200"></div><div class="px-3 py-2.5"><p class="text-xs font-semibold">Orange</p><p class="text-[11px] opacity-40 font-mono">#FFA200</p></div></button>
+          <button class="swatch hud-panel text-left overflow-hidden" onclick="copyHex('#FFC300')"><div class="h-20" style="background:#FFC300"></div><div class="px-3 py-2.5"><p class="text-xs font-semibold">Yellow</p><p class="text-[11px] opacity-40 font-mono">#FFC300</p></div></button>
+          <button class="swatch hud-panel text-left overflow-hidden" onclick="copyHex('#FFFFFF')"><div class="h-20 border-b" style="background:#FFFFFF"></div><div class="px-3 py-2.5"><p class="text-xs font-semibold">Blanc</p><p class="text-[11px] opacity-40 font-mono">#FFFFFF</p></div></button>
+          <button class="swatch hud-panel text-left overflow-hidden" onclick="copyHex('#FAFAF9')"><div class="h-20 border-b" style="background:#FAFAF9"></div><div class="px-3 py-2.5"><p class="text-xs font-semibold">Paper</p><p class="text-[11px] opacity-40 font-mono">#FAFAF9</p></div></button>
         </div>
       </div>
     </section>
@@ -457,8 +543,8 @@
     <button class="bottom-nav-btn flex-1 flex flex-col items-center gap-1 py-2.5" data-tab="dashboard" data-active="true" onclick="switchTab('dashboard')">
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18M7 15l4-4 3 3 5-6"/></svg><span class="text-[9px] font-medium">Dashboard</span>
     </button>
-    <button class="bottom-nav-btn flex-1 flex flex-col items-center gap-1 py-2.5" data-tab="calendrier" data-active="false" onclick="switchTab('calendrier')">
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 3v3M16 3v3"/></svg><span class="text-[9px] font-medium">Calendrier</span>
+    <button class="bottom-nav-btn flex-1 flex flex-col items-center gap-1 py-2.5" data-tab="arene" data-active="false" onclick="switchTab('arene')">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6.5 6.5l11 11M17.5 6.5l-11 11"/></svg><span class="text-[9px] font-medium">Arène</span>
     </button>
     <button class="bottom-nav-btn flex-1 flex flex-col items-center gap-1 py-2.5" data-tab="ambassadeurs" data-active="false" onclick="switchTab('ambassadeurs')">
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l2.5 6.5L21 9l-5 4.5L17.5 21 12 17l-5.5 4L8 13.5 3 9l6.5-.5L12 2z"/></svg><span class="text-[9px] font-medium">Ambass.</span>
@@ -472,15 +558,18 @@
   </nav>
 
   <div id="more-sheet-backdrop" class="hidden md:hidden fixed inset-0 bg-black/60 z-50" onclick="toggleMoreSheet()"></div>
-  <div id="more-sheet" class="hidden md:hidden fixed bottom-0 inset-x-0 z-50 bg-black border-t border-edo-orange/20 rounded-t-2xl p-5 pb-[calc(env(safe-area-inset-bottom)+1.25rem)]">
+  <div id="more-sheet" class="hidden md:hidden fixed bottom-0 inset-x-0 z-50 hud-sheet rounded-t-2xl p-5 pb-[calc(env(safe-area-inset-bottom)+1.25rem)]">
     <div class="w-10 h-1 bg-white/15 rounded-full mx-auto mb-5"></div>
-    <button class="w-full flex items-center gap-3 px-3 py-3 rounded-xl hover:bg-white/5 text-white" onclick="switchTab('edito'); toggleMoreSheet()">
+    <button class="w-full flex items-center gap-3 px-3 py-3 rounded-xl hover:bg-white/5" onclick="switchTab('calendrier'); toggleMoreSheet()">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 3v3M16 3v3"/></svg><span class="text-sm font-semibold">Calendrier suivi</span>
+    </button>
+    <button class="w-full flex items-center gap-3 px-3 py-3 rounded-xl hover:bg-white/5" onclick="switchTab('edito'); toggleMoreSheet()">
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9M16.5 3.5a2.12 2.12 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/></svg><span class="text-sm font-semibold">Calendrier édito</span>
     </button>
-    <button class="w-full flex items-center gap-3 px-3 py-3 rounded-xl hover:bg-white/5 text-white" onclick="switchTab('idees'); toggleMoreSheet()">
+    <button class="w-full flex items-center gap-3 px-3 py-3 rounded-xl hover:bg-white/5" onclick="switchTab('idees'); toggleMoreSheet()">
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20l-8-8a5 5 0 117-7l1 1 1-1a5 5 0 117 7l-8 8z"/></svg><span class="text-sm font-semibold">Banque d'idées</span>
     </button>
-    <button class="w-full flex items-center gap-3 px-3 py-3 rounded-xl hover:bg-white/5 text-white" onclick="switchTab('brand'); toggleMoreSheet()">
+    <button class="w-full flex items-center gap-3 px-3 py-3 rounded-xl hover:bg-white/5" onclick="switchTab('brand'); toggleMoreSheet()">
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/></svg><span class="text-sm font-semibold">Brand Center</span>
     </button>
     <div class="h-px bg-white/10 my-2"></div>
