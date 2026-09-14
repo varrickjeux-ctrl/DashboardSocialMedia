@@ -36,12 +36,12 @@ import {
 
 /* ⚠️ Complète cet objet avec tes clés Firebase (Console > Paramètres du projet > SDK) */
 const firebaseConfig = {
-  apiKey: "AIzaSyAnc2-tFoPV0WjziXyHjJJIlF-OUKEYCh0",
-  authDomain: "dashboardedo.firebaseapp.com",
-  projectId: "dashboardedo",
-  storageBucket: "dashboardedo.firebasestorage.app",
-  messagingSenderId: "328324561956",
-  appId: "1:328324561956:web:5c47027f0e481bdf5e2cb1"
+  // apiKey: "",
+  // authDomain: "",
+  // projectId: "",
+  // storageBucket: "",
+  // messagingSenderId: "",
+  // appId: ""
 };
 
 const isConfigured = !!firebaseConfig.apiKey;
@@ -187,6 +187,7 @@ let state = {
   subview: 'global',
   chartMetric: 'views',
   calendar: { year: null, month: null, selectedDate: null },
+  editoCalendar: { year: null, month: null, selectedDate: null },
   followers: { linkedin: 0, instagram: 0 },
   draggedTaskId: null,
   ambassadorSearch: ''
@@ -1159,9 +1160,82 @@ window.deleteEditoItem = async function (id) {
   catch (e) { console.error(e); alert('Impossible de supprimer cet élément pour le moment.'); }
 };
 
+window.shiftEditoMonth = function (delta) {
+  let m = state.editoCalendar.month + delta, y = state.editoCalendar.year;
+  if (m < 0) { m = 11; y -= 1; } if (m > 11) { m = 0; y += 1; }
+  state.editoCalendar.month = m; state.editoCalendar.year = y; state.editoCalendar.selectedDate = null;
+  const panel = document.getElementById('edito-cal-day-panel');
+  if (panel) panel.classList.add('hidden');
+  renderEditoCalendar();
+};
+
+function editoDotClass(item) {
+  if (item.done) return 'cal-dot-done';
+  return item.platform === 'instagram' ? 'bg-edo-orange' : 'cal-dot-neutral';
+}
+
+function renderEditoCalendar() {
+  if (state.editoCalendar.year === null) {
+    const today = todayDate();
+    state.editoCalendar.year = today.getFullYear(); state.editoCalendar.month = today.getMonth();
+  }
+  const { year, month } = state.editoCalendar;
+  const label = document.getElementById('edito-cal-month-label');
+  if (label) label.textContent = MONTH_NAMES[month] + ' ' + year;
+
+  const firstOfMonth = new Date(year, month, 1);
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const leadOffset = (firstOfMonth.getDay() + 6) % 7;
+
+  const cells = [];
+  for (let i = 0; i < leadOffset; i++) cells.push(null);
+  for (let d = 1; d <= daysInMonth; d++) cells.push(d);
+  while (cells.length % 7 !== 0) cells.push(null);
+
+  const grid = document.getElementById('edito-cal-grid');
+  if (!grid) return;
+
+  grid.innerHTML = cells.map(d => {
+    if (d === null) return `<div class="cal-cell"></div>`;
+    const iso = `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+    const dayItems = state.editorial.filter(e => e.date === iso);
+    const hasItems = dayItems.length > 0;
+    const selected = state.editoCalendar.selectedDate === iso;
+    const dots = dayItems.slice(0, 6).map(item => `<span class="cal-dot ${editoDotClass(item)}" title="${escapeHtml(item.subject || '')}"></span>`).join('');
+    return `
+      <div class="cal-cell" data-has-post="${hasItems}" data-selected="${selected}" onclick="${hasItems ? `selectEditoCalDay('${iso}')` : ''}">
+        <span class="cal-day-num">${d}</span>
+        <div class="flex flex-wrap gap-1">${dots}</div>
+      </div>`;
+  }).join('');
+
+  replay('edito-cal-wrapper');
+  if (state.editoCalendar.selectedDate) renderEditoCalDayPanel(state.editoCalendar.selectedDate);
+}
+
+window.selectEditoCalDay = function (iso) {
+  state.editoCalendar.selectedDate = (state.editoCalendar.selectedDate === iso) ? null : iso;
+  renderEditoCalendar();
+  if (state.editoCalendar.selectedDate) renderEditoCalDayPanel(state.editoCalendar.selectedDate);
+  else document.getElementById('edito-cal-day-panel').classList.add('hidden');
+};
+
+function renderEditoCalDayPanel(iso) {
+  const panel = document.getElementById('edito-cal-day-panel');
+  const dayItems = state.editorial.filter(e => e.date === iso);
+  panel.classList.remove('hidden');
+  document.getElementById('edito-cal-day-title').textContent = 'Planifié le ' + iso;
+  document.getElementById('edito-cal-day-posts').innerHTML = dayItems.map(item => `
+    <div class="flex items-center justify-between border rounded px-3 py-2 gap-3" style="border-color:var(--table-border)">
+      <div class="flex items-center gap-2 min-w-0">${platformBadge(item.platform)}<p class="text-sm truncate">${escapeHtml(item.subject || 'Sans sujet')}</p></div>
+      <button class="edito-done-btn shrink-0" data-done="${!!item.done}" onclick="toggleEditoDone('${item.id}', ${!!item.done})">${item.done ? '✅ FAIT' : '⏳ À FAIRE'}</button>
+    </div>`).join('');
+}
+
 function renderEdito() {
   const list = document.getElementById('edito-list');
   const empty = document.getElementById('edito-empty');
+  renderEditoCalendar();
   if (!list) return;
   const sorted = [...state.editorial].sort((a, b) => (a.date || '').localeCompare(b.date || ''));
 
@@ -1265,6 +1339,23 @@ window.deleteAmbassador = async function (id) {
 };
 
 function medalFor(rank) { return rank === 0 ? '🥇' : rank === 1 ? '🥈' : rank === 2 ? '🥉' : '#' + (rank + 1); }
+
+window.exportAmbassadorsCSV = function () {
+  if (state.ambassadors.length === 0) { alert('Aucun ambassadeur à exporter pour le moment.'); return; }
+  const headers = ['Prénom', 'Nom', 'Email', 'Téléphone', 'Points'];
+  const rows = [...state.ambassadors]
+    .sort((a, b) => num(b.points) - num(a.points))
+    .map(a => [a.firstname || '', a.lastname || '', a.email || '', a.phone || '', num(a.points)]);
+  const csvEscape = (v) => `"${String(v).replace(/"/g, '""')}"`;
+  const csv = [headers, ...rows].map(row => row.map(csvEscape).join(';')).join('\n');
+  const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = `edo-ambassadeurs-${toISO(todayDate())}.csv`;
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(url), 2000);
+  toast('Export Excel téléchargé', '⬇️');
+};
 
 window.renderAmbassadors = function () {
   const list = document.getElementById('ambassador-list');
