@@ -36,12 +36,12 @@ import {
 
 /* ⚠️ Complète cet objet avec tes clés Firebase (Console > Paramètres du projet > SDK) */
 const firebaseConfig = {
-  // apiKey: "",
-  // authDomain: "",
-  // projectId: "",
-  // storageBucket: "",
-  // messagingSenderId: "",
-  // appId: ""
+  apiKey: "AIzaSyAnc2-tFoPV0WjziXyHjJJIlF-OUKEYCh0",
+  authDomain: "dashboardedo.firebaseapp.com",
+  projectId: "dashboardedo",
+  storageBucket: "dashboardedo.firebasestorage.app",
+  messagingSenderId: "328324561956",
+  appId: "1:328324561956:web:5c47027f0e481bdf5e2cb1"
 };
 
 const isConfigured = !!firebaseConfig.apiKey;
