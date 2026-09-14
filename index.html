@@ -407,6 +407,30 @@
 
         <button id="toggle-edito-form-btn" onclick="toggleEditoForm()" class="hud-btn-primary px-5 py-3 mt-5">+ PLANIFIER UN POST</button>
 
+        <div class="mt-8">
+          <div class="flex items-center justify-between max-w-xl">
+            <button onclick="shiftEditoMonth(-1)" class="hud-btn-ghost w-9 h-9 !p-0 flex items-center justify-center"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg></button>
+            <p id="edito-cal-month-label" class="font-heading font-bold text-base"></p>
+            <button onclick="shiftEditoMonth(1)" class="hud-btn-ghost w-9 h-9 !p-0 flex items-center justify-center"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg></button>
+          </div>
+          <div class="flex items-center gap-4 mt-4 text-xs opacity-40 font-mono flex-wrap">
+            <span class="flex items-center gap-1.5"><span class="cal-dot bg-edo-orange"></span>INSTAGRAM</span>
+            <span class="flex items-center gap-1.5"><span class="cal-dot cal-dot-neutral"></span>LINKEDIN</span>
+            <span class="flex items-center gap-1.5"><span class="cal-dot cal-dot-outline"></span>À FAIRE</span>
+            <span class="flex items-center gap-1.5"><span class="cal-dot cal-dot-done"></span>FAIT</span>
+          </div>
+          <div id="edito-cal-wrapper" class="fade-target grid grid-cols-7 gap-px mt-3 hud-cal-grid max-w-5xl">
+            <div class="hud-cal-head">Lun</div><div class="hud-cal-head">Mar</div><div class="hud-cal-head">Mer</div><div class="hud-cal-head">Jeu</div><div class="hud-cal-head">Ven</div><div class="hud-cal-head">Sam</div><div class="hud-cal-head">Dim</div>
+            <div id="edito-cal-grid" class="contents"></div>
+          </div>
+          <div id="edito-cal-day-panel" class="hidden anim-fade-up mt-5 hud-panel p-5 max-w-2xl">
+            <p id="edito-cal-day-title" class="font-heading font-semibold text-sm"></p>
+            <div id="edito-cal-day-posts" class="mt-3 space-y-2"></div>
+          </div>
+        </div>
+
+        <p class="font-heading font-semibold text-lg mt-10">Liste des posts à faire <span class="opacity-30 text-sm font-medium">— triée par date</span></p>
+
         <form id="edito-form" class="hidden hud-panel mt-4 p-5 md:p-6 space-y-5">
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
             <div><label class="hud-label">Date de publication prévue</label><input required type="date" id="e-date" class="hud-input w-full" /></div>
@@ -467,9 +491,12 @@
           <button type="submit" class="hud-btn-primary py-2.5 shrink-0">+ RECRUTER</button>
         </form>
 
-        <div class="mt-6 relative max-w-sm">
-          <svg class="absolute left-3 top-1/2 -translate-y-1/2 opacity-30" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
-          <input type="text" id="amb-search" placeholder="Rechercher un nom, un prénom…" class="hud-input w-full pl-9" oninput="renderAmbassadors()" />
+        <div class="flex items-center justify-between flex-wrap gap-3 mt-6">
+          <div class="relative max-w-sm w-full sm:w-auto">
+            <svg class="absolute left-3 top-1/2 -translate-y-1/2 opacity-30" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+            <input type="text" id="amb-search" placeholder="Rechercher un nom, un prénom…" class="hud-input w-full sm:w-72 pl-9" oninput="renderAmbassadors()" />
+          </div>
+          <button onclick="exportAmbassadorsCSV()" class="hud-btn-ghost px-4 py-2.5 text-xs">⬇ EXPORTER EN EXCEL</button>
         </div>
 
         <div id="ambassador-list" class="mt-6 space-y-3"></div>
