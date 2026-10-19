@@ -33,6 +33,7 @@
 </script>
 <link rel="stylesheet" href="style.css" />
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+<script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
 </head>
 <body class="font-body">
 
@@ -179,7 +180,7 @@
 
     <div class="sticky top-0 z-20">
       <!-- BOSS BAR -->
-      <div class="boss-bar px-4 md:px-8 py-3">
+      <div id="boss-bar" class="boss-bar px-4 md:px-8 py-3" onclick="switchTab('arene')" title="Ouvrir l'Arène / Objectifs">
         <div class="flex items-center justify-between gap-3 mb-1.5 flex-wrap">
           <p class="font-heading font-black text-xs sm:text-sm text-white tracking-widest uppercase flex items-center gap-2">
             <span>👹</span><span id="boss-name">BOSS DU MOIS</span>
@@ -345,22 +346,34 @@
 
     <!-- VIEW: ARÈNE / OBJECTIFS -->
     <section id="view-arene" class="view" data-visible="false">
-      <div class="w-full px-4 md:px-8 py-8 md:py-10 max-w-4xl">
+      <div class="w-full px-4 md:px-8 py-8 md:py-10 max-w-5xl">
         <p class="font-heading font-bold text-2xl">Arène / Objectifs</p>
-        <p class="text-sm opacity-40 mt-1">Configure le Boss du mois et consulte le tableau de chasse.</p>
+        <p class="text-sm opacity-40 mt-1">Fixe un Boss pour n'importe quel mois, ajoute des stats à la main si besoin, et consulte le tableau de chasse.</p>
 
-        <form id="boss-form" class="mt-6 hud-panel p-5 flex flex-col sm:flex-row items-stretch sm:items-end gap-3">
-          <div class="flex-1">
-            <label class="hud-label">PV du Boss (objectif de vues du mois en cours)</label>
+        <form id="boss-form" class="mt-6 hud-panel p-5 grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-[10rem_1fr_1fr_auto] gap-4 items-end">
+          <div>
+            <label class="hud-label">Mois</label>
+            <input required type="month" id="boss-month" placeholder="AAAA-MM" class="hud-input w-full" />
+          </div>
+          <div>
+            <label class="hud-label">PV du Boss (objectif de vues)</label>
             <input required type="number" min="1" id="boss-target" placeholder="Ex : 50000" class="hud-input w-full" />
           </div>
-          <button type="submit" class="hud-btn-primary px-5 py-2.5 shrink-0">METTRE À JOUR LE BOSS</button>
+          <div>
+            <label class="hud-label">Stats manuelles (vues hors posts saisis)</label>
+            <input type="number" min="0" id="boss-manual" placeholder="Optionnel — ex : 12000" class="hud-input w-full" />
+          </div>
+          <div class="flex items-center gap-2">
+            <button type="submit" id="boss-submit-btn" class="hud-btn-primary px-5 py-2.5 shrink-0">ENREGISTRER L'OBJECTIF</button>
+            <button type="button" id="boss-cancel-btn" onclick="resetBossForm()" class="hidden hud-btn-ghost px-4 py-2.5">Annuler</button>
+          </div>
         </form>
+        <p class="text-[11px] opacity-40 mt-2">Vues obtenues = vues des posts saisis ce mois-là + stats manuelles. Un mois déjà configuré peut être modifié depuis le tableau.</p>
 
-        <p class="font-heading font-semibold text-lg mt-8">Tableau de chasse <span class="opacity-30 text-sm font-medium">— historique des mois</span></p>
+        <p class="font-heading font-semibold text-lg mt-8">Tableau de chasse <span class="opacity-30 text-sm font-medium">— tous les mois</span></p>
         <div id="boss-history" class="mt-4 hud-panel overflow-x-auto">
-          <table class="hud-table w-full text-sm min-w-[480px]">
-            <thead><tr><th>Mois</th><th>Objectif</th><th>Vues obtenues</th><th>Résultat</th></tr></thead>
+          <table class="hud-table w-full text-sm min-w-[760px]">
+            <thead><tr><th>Mois</th><th>Objectif</th><th>Vues (posts)</th><th>Stats manuelles</th><th>Total</th><th>Résultat</th><th></th></tr></thead>
             <tbody id="boss-history-body"></tbody>
           </table>
           <div id="boss-history-empty" class="hidden px-4 py-10 text-center">
@@ -496,7 +509,12 @@
             <svg class="absolute left-3 top-1/2 -translate-y-1/2 opacity-30" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
             <input type="text" id="amb-search" placeholder="Rechercher un nom, un prénom…" class="hud-input w-full sm:w-72 pl-9" oninput="renderAmbassadors()" />
           </div>
-          <button onclick="exportAmbassadorsCSV()" class="hud-btn-ghost px-4 py-2.5 text-xs">⬇ EXPORTER EN EXCEL</button>
+          <div class="flex items-center gap-2 flex-wrap">
+            <input type="file" id="amb-import-file" accept=".xlsx,.xls,.csv" class="hidden" onchange="importAmbassadors(event)" />
+            <button onclick="document.getElementById('amb-import-file').click()" class="hud-btn-ghost px-4 py-2.5 text-xs">⬆ IMPORTER (EXCEL / CSV)</button>
+            <button onclick="exportAmbassadorsExcel()" class="hud-btn-ghost px-4 py-2.5 text-xs">⬇ EXPORTER EN EXCEL</button>
+          </div>
+          <p class="w-full text-[11px] opacity-40">Import : la 1re ligne doit contenir les en-têtes (Prénom, Nom, Email, Téléphone, Points). Les doublons (même email ou même nom) sont ignorés.</p>
         </div>
 
         <div id="ambassador-list" class="mt-6 space-y-3"></div>
@@ -511,38 +529,55 @@
     <section id="view-taches" class="view" data-visible="false">
       <div class="w-full px-4 md:px-8 py-8 md:py-10">
         <p class="font-heading font-bold text-2xl">Quêtes</p>
-        <p class="text-sm opacity-40 mt-1">Le kanban de l'équipe. Glisse-dépose pour faire avancer la quête.</p>
+        <p class="text-sm opacity-40 mt-1">Clique sur une étiquette pour l'ouvrir (description, deadline…). Glisse la poignée ⠿ pour la déplacer, ou utilise le menu ⋯ des colonnes pour les organiser.</p>
 
-        <form id="task-form" class="mt-6 hud-panel p-4 md:p-5 flex flex-col sm:flex-row items-stretch sm:items-end gap-3">
-          <div class="flex-1"><label class="hud-label">Titre de la tâche</label><input required type="text" id="t-title" placeholder="Ex : Storyboard reel rentrée" class="hud-input w-full" /></div>
-          <div class="sm:w-48"><label class="hud-label">Assigné·e à</label><input required type="text" id="t-assignee" placeholder="Ex : Léa" class="hud-input w-full" /></div>
-          <div class="sm:w-40">
-            <label class="hud-label">Colonne</label>
-            <select id="t-status" class="hud-input w-full">
-              <option value="idees">💡 Idées</option><option value="afaire">📝 À faire</option><option value="encours">🚧 En cours</option><option value="valide">🏆 Validé</option>
+        <form id="task-form" class="mt-6 hud-panel p-4 md:p-5 grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-[1fr_10rem_10rem_11rem_auto] gap-3 items-end">
+          <div>
+            <label class="hud-label">Titre de l'étiquette</label>
+            <input required type="text" id="t-title" placeholder="Ex : Storyboard reel rentrée" class="hud-input w-full" />
+          </div>
+          <div>
+            <label class="hud-label">Attribuer à</label>
+            <select id="t-assignee" data-who="" onchange="this.dataset.who=this.value" class="hud-input assignee-select w-full">
+              <option value="">— Personne</option><option value="COM">COM</option><option value="CLEM">CLEM</option><option value="ESTE">ESTE</option>
             </select>
+          </div>
+          <div>
+            <label class="hud-label">Deadline</label>
+            <input type="date" id="t-deadline" class="hud-input w-full" />
+          </div>
+          <div>
+            <label class="hud-label">Colonne</label>
+            <select id="t-status" class="hud-input w-full"></select>
           </div>
           <button type="submit" class="hud-btn-primary px-5 py-2.5 shrink-0">LANCER LA QUÊTE</button>
         </form>
 
-        <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 mt-6">
-          <div class="hud-kanban-col" data-status="idees" ondragover="handleColDragOver(event)" ondragleave="handleColDragLeave(event)" ondrop="handleColDrop(event, 'idees')">
-            <div class="hud-kanban-head"><p>💡 IDÉES</p><span id="count-idees" class="hud-kanban-count">0</span></div>
-            <div id="col-idees" class="space-y-2.5 min-h-[80px] p-3"></div>
-          </div>
-          <div class="hud-kanban-col" data-status="afaire" ondragover="handleColDragOver(event)" ondragleave="handleColDragLeave(event)" ondrop="handleColDrop(event, 'afaire')">
-            <div class="hud-kanban-head"><p>📝 À FAIRE</p><span id="count-afaire" class="hud-kanban-count">0</span></div>
-            <div id="col-afaire" class="space-y-2.5 min-h-[80px] p-3"></div>
-          </div>
-          <div class="hud-kanban-col" data-status="encours" ondragover="handleColDragOver(event)" ondragleave="handleColDragLeave(event)" ondrop="handleColDrop(event, 'encours')">
-            <div class="hud-kanban-head"><p>🚧 EN COURS</p><span id="count-encours" class="hud-kanban-count">0</span></div>
-            <div id="col-encours" class="space-y-2.5 min-h-[80px] p-3"></div>
-          </div>
-          <div class="hud-kanban-col" data-status="valide" ondragover="handleColDragOver(event)" ondragleave="handleColDragLeave(event)" ondrop="handleColDrop(event, 'valide')">
-            <div class="hud-kanban-head"><p>🏆 VALIDÉ</p><span id="count-valide" class="hud-kanban-count">0</span></div>
-            <div id="col-valide" class="space-y-2.5 min-h-[80px] p-3"></div>
+        <div class="flex items-center justify-between flex-wrap gap-3 mt-5">
+          <form id="column-form" class="flex items-center gap-2" onsubmit="addColumn(event)">
+            <input type="text" id="new-col-name" maxlength="30" placeholder="Nouvelle colonne…" class="hud-input w-48" />
+            <button type="submit" class="hud-btn-ghost px-4 py-2.5 text-xs">+ COLONNE</button>
+          </form>
+          <div class="flex items-center gap-2 flex-wrap">
+            <label for="task-sort" class="hud-label !mb-0">Tri</label>
+            <select id="task-sort" class="hud-input text-xs" onchange="setTaskSort(this.value)">
+              <option value="recent">Plus récentes</option>
+              <option value="deadline">Deadline</option>
+              <option value="assignee">Attribution</option>
+              <option value="title">A → Z</option>
+            </select>
+            <button type="button" onclick="selectAllTasks()" class="hud-btn-ghost px-4 py-2.5 text-xs">☑ TOUT SÉLECTIONNER</button>
           </div>
         </div>
+
+        <div id="bulk-bar" class="hidden mt-4 hud-panel px-4 py-3 flex items-center gap-3 flex-wrap">
+          <span id="bulk-count" class="font-mono text-xs font-bold text-edo-orange"></span>
+          <select id="bulk-move" class="hud-input text-xs" onchange="moveSelectedTasks(this.value)"></select>
+          <button type="button" onclick="deleteSelectedTasks()" class="hud-btn-danger px-4 py-2 text-xs">SUPPRIMER LA SÉLECTION</button>
+          <button type="button" onclick="clearTaskSelection()" class="hud-btn-ghost px-3 py-2 text-xs">Désélectionner</button>
+        </div>
+
+        <div id="kanban-board" class="kanban-board mt-6"></div>
       </div>
     </section>
 
@@ -603,6 +638,45 @@
     <button class="w-full flex items-center gap-3 px-3 py-3 rounded-xl hover:bg-white/5 text-red-400" onclick="handleLogout()">
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9"/></svg><span class="text-sm font-semibold">Se déconnecter</span>
     </button>
+  </div>
+
+  <!-- MODALE : OUVRIR UNE ÉTIQUETTE -->
+  <div id="task-modal" class="hidden fixed inset-0 z-[75] flex items-center justify-center p-4">
+    <div class="absolute inset-0 bg-black/60" onclick="closeTaskModal()"></div>
+    <form id="task-modal-form" class="hud-panel hud-modal relative w-full max-w-lg p-5 md:p-6 space-y-4 max-h-[90vh] overflow-y-auto" onsubmit="handleTaskModalSubmit(event)">
+      <div class="flex items-center justify-between">
+        <p class="font-heading font-bold text-lg">Étiquette</p>
+        <button type="button" onclick="closeTaskModal()" class="opacity-50 hover:opacity-100 text-lg leading-none" aria-label="Fermer">✕</button>
+      </div>
+      <div>
+        <label class="hud-label">Titre</label>
+        <input required type="text" id="tm-title" class="hud-input w-full" />
+      </div>
+      <div>
+        <label class="hud-label">Description</label>
+        <textarea id="tm-desc" rows="5" placeholder="Détails, liens, consignes…" class="hud-input w-full resize-y"></textarea>
+      </div>
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div>
+          <label class="hud-label">Deadline</label>
+          <input type="date" id="tm-deadline" class="hud-input w-full" />
+        </div>
+        <div>
+          <label class="hud-label">Attribuée à</label>
+          <select id="tm-assignee" data-who="" onchange="this.dataset.who=this.value" class="hud-input assignee-select w-full">
+            <option value="">— Personne</option><option value="COM">COM</option><option value="CLEM">CLEM</option><option value="ESTE">ESTE</option>
+          </select>
+        </div>
+        <div>
+          <label class="hud-label">Colonne</label>
+          <select id="tm-column" class="hud-input w-full"></select>
+        </div>
+      </div>
+      <div class="flex items-center gap-3 pt-1">
+        <button type="submit" class="hud-btn-primary flex-1 py-3">ENREGISTRER</button>
+        <button type="button" onclick="deleteTaskFromModal()" class="hud-btn-danger px-4 py-3">Supprimer</button>
+      </div>
+    </form>
   </div>
 
 </div>
