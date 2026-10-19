@@ -23,12 +23,18 @@
    4. Collections : "social_posts", "edo_editorial", "swipe_file",
       "edo_ambassadors", "edo_tasks", "edo_bosses", "edo_users", "app_settings"
       (créées automatiquement au premier enregistrement).
+      ⚠️ Chaque collection DOIT figurer dans tes règles : une collection absente
+      est refusée par Firestore (erreur "permission-denied", désormais affichée
+      à l'écran). Les colonnes du kanban sont stockées dans app_settings/taskBoard.
+
+      Raccourci équivalent si tu veux tout couvrir d'un coup :
+        match /{document=**} { allow read, write: if request.auth != null; }
    ========================================================================== */
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import {
   getFirestore, collection, addDoc, updateDoc, deleteDoc, doc,
-  onSnapshot, query, orderBy, setDoc, getDoc, serverTimestamp, increment
+  onSnapshot, query, orderBy, setDoc, getDoc, serverTimestamp, increment, writeBatch
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import {
   getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut
@@ -36,12 +42,12 @@ import {
 
 /* ⚠️ Complète cet objet avec tes clés Firebase (Console > Paramètres du projet > SDK) */
 const firebaseConfig = {
-  apiKey: "AIzaSyAnc2-tFoPV0WjziXyHjJJIlF-OUKEYCh0",
-  authDomain: "dashboardedo.firebaseapp.com",
-  projectId: "dashboardedo",
-  storageBucket: "dashboardedo.firebasestorage.app",
-  messagingSenderId: "328324561956",
-  appId: "1:328324561956:web:5c47027f0e481bdf5e2cb1"
+  // apiKey: "",
+  // authDomain: "",
+  // projectId: "",
+  // storageBucket: "",
+  // messagingSenderId: "",
+  // appId: ""
 };
 
 const isConfigured = !!firebaseConfig.apiKey;
@@ -69,6 +75,7 @@ const ambassadorsCol = () => collection(db, 'edo_ambassadors');
 const tasksCol = () => collection(db, 'edo_tasks');
 const bossesCol = () => collection(db, 'edo_bosses');
 const settingsDoc = () => doc(db, 'app_settings', 'counters');
+const boardDoc = () => doc(db, 'app_settings', 'taskBoard');
 const userDoc = () => doc(db, 'edo_users', currentUser.uid);
 
 /* ============ THÈME CLAIR / SOMBRE ============ */
@@ -96,7 +103,15 @@ const BREADCRUMB = {
   brand: { title: 'Brand Center', sub: 'Rester on-brand en toutes circonstances' }
 };
 
-const TASK_STATUSES = ['idees', 'afaire', 'encours', 'valide'];
+/* ---- Kanban : personnes attribuables + colonnes par défaut ---- */
+const ASSIGNEES = ['COM', 'CLEM', 'ESTE'];
+const DEFAULT_COLUMNS = [
+  { id: 'idees',   name: '💡 Idées',    done: false },
+  { id: 'afaire',  name: '📝 À faire',  done: false },
+  { id: 'encours', name: '🚧 En cours', done: false },
+  { id: 'valide',  name: '🏆 Validé',   done: true }
+];
+function loadTaskSort() { try { return localStorage.getItem('edo-task-sort') || 'recent'; } catch (e) { return 'recent'; } }
 const CHART_METRICS = { views: { label: 'vues' }, likes: { label: 'likes' }, comments: { label: 'commentaires' }, engagement: { label: "taux d'engagement" } };
 
 /* ============ SYSTÈME XP / NIVEAUX / TITRES ============ */
@@ -190,7 +205,11 @@ let state = {
   editoCalendar: { year: null, month: null, selectedDate: null },
   followers: { linkedin: 0, instagram: 0 },
   draggedTaskId: null,
-  ambassadorSearch: ''
+  ambassadorSearch: '',
+  columns: DEFAULT_COLUMNS.map(c => ({ ...c })),
+  selectedTasks: new Set(),
+  taskSort: loadTaskSort(),
+  modalTaskId: null
 };
 
 let lineChart = null;
@@ -205,6 +224,29 @@ function toast(message, emoji) {
   el.innerHTML = `<span>${emoji || '✨'}</span><span>${message}</span>`;
   stack.appendChild(el);
   setTimeout(() => { el.classList.add('toast-out'); setTimeout(() => el.remove(), 300); }, 2200);
+}
+
+/* ============ ERREURS FIRESTORE (diagnostic lisible) ============ */
+const warnedLabels = new Set();
+function reportFirestoreError(label, err) {
+  console.error(`Erreur ${label} :`, err);
+  if (warnedLabels.has(label)) return;
+  warnedLabels.add(label);
+  const code = err && err.code ? err.code : 'inconnue';
+  if (code === 'permission-denied') toast(`Accès refusé sur « ${label} » — vérifie les règles Firestore`, '🔒');
+  else toast(`Erreur sur « ${label} » (${code})`, '⚠️');
+}
+function explainError(err, fallback) {
+  const code = err && err.code ? err.code : '';
+  if (code === 'permission-denied') return `${fallback}\n\nFirestore refuse l'accès : ajoute cette collection dans tes règles de sécurité (voir le commentaire en haut de app.js).`;
+  return code ? `${fallback}\n(code : ${code})` : fallback;
+}
+async function runInBatches(ops, size = 400) {
+  for (let i = 0; i < ops.length; i += size) {
+    const batch = writeBatch(db);
+    ops.slice(i, i + size).forEach(op => op(batch));
+    await batch.commit();
+  }
 }
 
 /* ============ AUTHENTIFICATION ============ */
@@ -361,62 +403,76 @@ function initListeners() {
 
   ensureUserProfile();
 
-  try {
-    unsubscribers.push(onSnapshot(query(postsCol(), orderBy('date', 'desc')), (snap) => {
-      state.posts = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-      setConnectionStatus(true);
-      renderBossBar();
-      if (state.activeTab === 'dashboard') renderDashboard();
-      if (state.activeTab === 'calendrier') renderCalendar();
-      if (state.activeTab === 'arene') renderBossHistory();
-    }, (err) => { console.error('Erreur social_posts :', err); setConnectionStatus(false); }));
+  // Chaque écouteur est indépendant : une erreur sur une collection
+  // (ex. règle Firestore manquante) n'empêche plus les autres de démarrer.
+  const listen = (label, source, onData) => {
+    try {
+      unsubscribers.push(onSnapshot(source, onData, (err) => {
+        reportFirestoreError(label, err);
+        if (label === 'social_posts') setConnectionStatus(false);
+      }));
+    } catch (e) { reportFirestoreError(label, e); }
+  };
 
-    unsubscribers.push(onSnapshot(query(editoCol(), orderBy('date', 'asc')), (snap) => {
-      state.editorial = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-      if (state.activeTab === 'edito') renderEdito();
-    }, (err) => console.error('Erreur edo_editorial :', err)));
+  listen('social_posts', query(postsCol(), orderBy('date', 'desc')), (snap) => {
+    state.posts = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    setConnectionStatus(true);
+    renderBossBar();
+    if (state.activeTab === 'dashboard') renderDashboard();
+    if (state.activeTab === 'calendrier') renderCalendar();
+    if (state.activeTab === 'arene') renderBossHistory();
+  });
 
-    unsubscribers.push(onSnapshot(query(swipeCol(), orderBy('createdAt', 'desc')), (snap) => {
-      state.swipes = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-      if (state.activeTab === 'idees') renderSwipeGrid();
-    }, (err) => console.error('Erreur swipe_file :', err)));
+  listen('edo_editorial', query(editoCol(), orderBy('date', 'asc')), (snap) => {
+    state.editorial = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    if (state.activeTab === 'edito') renderEdito();
+  });
 
-    unsubscribers.push(onSnapshot(query(ambassadorsCol(), orderBy('points', 'desc')), (snap) => {
-      state.ambassadors = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-      renderAmbassadors();
-    }, (err) => console.error('Erreur edo_ambassadors :', err)));
+  listen('swipe_file', query(swipeCol(), orderBy('createdAt', 'desc')), (snap) => {
+    state.swipes = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    if (state.activeTab === 'idees') renderSwipeGrid();
+  });
 
-    unsubscribers.push(onSnapshot(query(tasksCol(), orderBy('createdAt', 'desc')), (snap) => {
-      state.tasks = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-      renderKanban();
-    }, (err) => console.error('Erreur edo_tasks :', err)));
+  listen('edo_ambassadors', query(ambassadorsCol(), orderBy('points', 'desc')), (snap) => {
+    state.ambassadors = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    renderAmbassadors();
+  });
 
-    unsubscribers.push(onSnapshot(query(bossesCol(), orderBy('__name__', 'desc')), (snap) => {
-      state.bosses = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-      renderBossBar();
-      if (state.activeTab === 'arene') renderBossHistory();
-    }, (err) => console.error('Erreur edo_bosses :', err)));
+  listen('edo_tasks', tasksCol(), (snap) => {
+    state.tasks = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    renderKanban();
+  });
 
-    unsubscribers.push(onSnapshot(settingsDoc(), (snap) => {
-      if (snap.exists()) {
-        const data = snap.data() || {};
-        state.followers.linkedin = data.linkedin || 0;
-        state.followers.instagram = data.instagram || 0;
-        renderFollowers();
-      }
-    }, (err) => console.error('Erreur app_settings :', err)));
+  listen('app_settings/taskBoard', boardDoc(), (snap) => {
+    const data = snap.exists() ? snap.data() : null;
+    state.columns = data && Array.isArray(data.columns) && data.columns.length
+      ? data.columns
+      : DEFAULT_COLUMNS.map(c => ({ ...c }));
+    renderKanban();
+  });
 
-    unsubscribers.push(onSnapshot(userDoc(), (snap) => {
-      if (snap.exists()) {
-        state.profile = snap.data() || {};
-        renderProfile();
-        ensureDailyQuests();
-      }
-    }, (err) => console.error('Erreur edo_users :', err)));
-  } catch (e) {
-    console.error("Erreur d'initialisation des écouteurs :", e);
-    setConnectionStatus(false);
-  }
+  listen('edo_bosses', bossesCol(), (snap) => {
+    state.bosses = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    renderBossBar();
+    if (state.activeTab === 'arene') renderBossHistory();
+  });
+
+  listen('app_settings/counters', settingsDoc(), (snap) => {
+    if (snap.exists()) {
+      const data = snap.data() || {};
+      state.followers.linkedin = data.linkedin || 0;
+      state.followers.instagram = data.instagram || 0;
+      renderFollowers();
+    }
+  });
+
+  listen('edo_users', userDoc(), (snap) => {
+    if (snap.exists()) {
+      state.profile = snap.data() || {};
+      renderProfile();
+      ensureDailyQuests();
+    }
+  });
 }
 
 function setConnectionStatus(ok) {
@@ -524,16 +580,24 @@ window.completeQuest = async function (index) {
 /* ============ BOSS FIGHT ============ */
 function currentMonthId(d) { d = d || todayDate(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`; }
 function monthLabelFromId(id) {
-  const [y, m] = id.split('-').map(Number);
-  const names = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'];
-  return names[m - 1] + ' ' + y;
+  const [y, m] = String(id).split('-').map(Number);
+  if (!y || !m) return String(id);
+  return MONTH_NAMES[m - 1] + ' ' + y;
 }
-function achievedViewsForMonth(monthId) {
+// Vues des posts saisis pendant le mois (YYYY-MM)
+function postViewsForMonth(monthId) {
   const [y, m] = monthId.split('-').map(Number);
   const start = `${y}-${String(m).padStart(2, '0')}-01`;
-  const endDate = new Date(y, m, 0);
-  const end = toISO(endDate);
+  const end = toISO(new Date(y, m, 0));
   return state.posts.filter(p => p.date && p.date >= start && p.date <= end).reduce((s, p) => s + num(p.views), 0);
+}
+// Dégâts totaux = vues des posts + stats manuelles saisies dans l'Arène
+function bossStats(monthId, bossDoc) {
+  const fromPosts = postViewsForMonth(monthId);
+  const manual = num(bossDoc && bossDoc.manualViews);
+  const target = num(bossDoc && bossDoc.targetViews);
+  const total = fromPosts + manual;
+  return { fromPosts, manual, total, target, pct: target > 0 ? (total / target) * 100 : 0 };
 }
 
 function renderBossBar() {
@@ -546,29 +610,34 @@ function renderBossBar() {
 
   nameEl.textContent = 'BOSS DE ' + monthLabelFromId(monthId).toUpperCase();
 
-  if (!bossDoc || !bossDoc.targetViews) {
-    labelEl.textContent = 'Non configuré';
-    fillEl.style.width = '0%';
-    fillEl.dataset.defeated = 'false';
+  if (!bossDoc || !(num(bossDoc.targetViews) > 0)) {
+    labelEl.textContent = 'Aucun objectif ce mois-ci — clique ici pour en définir un';
+    fillEl.style.width = '100%';
+    fillEl.dataset.state = 'empty';
     return;
   }
 
-  const target = num(bossDoc.targetViews);
-  const achieved = achievedViewsForMonth(monthId);
-  const remaining = Math.max(0, target - achieved);
-  const pctDamage = target > 0 ? Math.min(100, (achieved / target) * 100) : 0;
+  const s = bossStats(monthId, bossDoc);
+  const defeated = s.total >= s.target;
+  const damage = Math.min(100, s.pct);
 
-  labelEl.textContent = `${formatNumber(remaining)} PV restants / ${formatNumber(target)}`;
-  fillEl.style.width = (100 - pctDamage) + '%';
+  if (defeated) {
+    fillEl.style.width = '100%';
+    fillEl.dataset.state = 'defeated';
+    labelEl.textContent = `BOSS VAINCU 🏆 — ${formatNumber(s.total)} / ${formatNumber(s.target)} vues`;
+  } else {
+    fillEl.style.width = (100 - damage) + '%';
+    fillEl.dataset.state = 'alive';
+    labelEl.textContent = `${formatNumber(s.target - s.total)} PV restants / ${formatNumber(s.target)}  ·  ${Math.round(damage)} % de dégâts`;
+  }
 
-  const wasDefeated = !!bossDoc.defeated;
-  const isDefeatedNow = achieved >= target && target > 0;
-  fillEl.dataset.defeated = String(isDefeatedNow);
-
-  if (isDefeatedNow && !wasDefeated) {
-    updateDoc(doc(db, 'edo_bosses', monthId), { defeated: true, defeatedAt: serverTimestamp() })
+  // Bonus d'XP unique par mois (flag xpAwarded)
+  if (defeated && !bossDoc.xpAwarded && state.bossAwardingMonth !== monthId) {
+    state.bossAwardingMonth = monthId;
+    updateDoc(doc(db, 'edo_bosses', monthId), { defeated: true, xpAwarded: true, defeatedAt: serverTimestamp() })
       .then(() => { toast('👹 BOSS VAINCU ! +200 XP bonus', '🏆'); awardXp(200); })
-      .catch(e => console.error('Erreur mise à jour Boss :', e));
+      .catch(e => reportFirestoreError('edo_bosses', e))
+      .finally(() => { state.bossAwardingMonth = null; });
   }
 }
 
@@ -577,35 +646,89 @@ document.getElementById('boss-form') && document.getElementById('boss-form').add
 async function handleBossSubmit(evt) {
   evt.preventDefault();
   if (!isConfigured || !db) { alert('Configure Firebase avant de paramétrer le Boss.'); return; }
+
+  const month = (document.getElementById('boss-month').value || '').trim();
   const target = Number(document.getElementById('boss-target').value) || 0;
-  if (target <= 0) { alert('Merci de saisir un objectif de vues valide.'); return; }
-  const monthId = currentMonthId();
+  const manualRaw = document.getElementById('boss-manual').value;
+  const manual = manualRaw === '' ? 0 : Math.max(0, Number(manualRaw) || 0);
+
+  if (!/^\d{4}-\d{2}$/.test(month)) { alert('Merci de choisir un mois valide (format AAAA-MM).'); return; }
+  if (target <= 0) { alert('Merci de saisir un objectif de vues valide (supérieur à 0).'); return; }
+
+  const payload = { targetViews: target, manualViews: manual };
+  // Si le nouvel objectif n'est plus atteint, le boss est de nouveau vivant
+  if (postViewsForMonth(month) + manual < target) payload.defeated = false;
+
+  const btn = document.getElementById('boss-submit-btn');
+  btn.disabled = true;
   try {
-    await setDoc(doc(db, 'edo_bosses', monthId), { targetViews: target, defeated: false }, { merge: true });
-    toast('Boss du mois mis à jour', '👹');
-    evt.target.reset();
-  } catch (e) { console.error(e); alert('Impossible de mettre à jour le Boss pour le moment.'); }
+    await setDoc(doc(db, 'edo_bosses', month), payload, { merge: true });
+    toast(`Boss de ${escapeHtml(monthLabelFromId(month))} enregistré`, '👹');
+    resetBossForm();
+  } catch (e) {
+    reportFirestoreError('edo_bosses', e);
+    alert(explainError(e, "Impossible d'enregistrer cet objectif pour le moment."));
+  } finally {
+    btn.disabled = false;
+  }
 }
+
+window.resetBossForm = function () {
+  const form = document.getElementById('boss-form');
+  if (!form) return;
+  form.reset();
+  document.getElementById('boss-month').value = currentMonthId();
+  document.getElementById('boss-submit-btn').textContent = "ENREGISTRER L'OBJECTIF";
+  document.getElementById('boss-cancel-btn').classList.add('hidden');
+};
+
+window.editBoss = function (id) {
+  const b = state.bosses.find(x => x.id === id);
+  if (!b) return;
+  document.getElementById('boss-month').value = b.id;
+  document.getElementById('boss-target').value = num(b.targetViews) || '';
+  document.getElementById('boss-manual').value = num(b.manualViews) || '';
+  document.getElementById('boss-submit-btn').textContent = 'METTRE À JOUR';
+  document.getElementById('boss-cancel-btn').classList.remove('hidden');
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+};
+
+window.deleteBoss = async function (id) {
+  if (!confirm(`Supprimer l'objectif de ${monthLabelFromId(id)} ?`)) return;
+  try { await deleteDoc(doc(db, 'edo_bosses', id)); toast('Objectif supprimé', '🗑️'); }
+  catch (e) { reportFirestoreError('edo_bosses', e); alert(explainError(e, "Impossible de supprimer cet objectif pour le moment.")); }
+};
 
 function renderBossHistory() {
   const tbody = document.getElementById('boss-history-body');
   const empty = document.getElementById('boss-history-empty');
   if (!tbody) return;
+  const nowId = currentMonthId();
   const sorted = [...state.bosses].sort((a, b) => b.id.localeCompare(a.id));
 
   if (sorted.length === 0) { tbody.innerHTML = ''; empty.classList.remove('hidden'); return; }
   empty.classList.add('hidden');
 
   tbody.innerHTML = sorted.map(b => {
-    const achieved = achievedViewsForMonth(b.id);
-    const target = num(b.targetViews);
-    const won = target > 0 && achieved >= target;
+    const s = bossStats(b.id, b);
+    const won = s.target > 0 && s.total >= s.target;
+    let status;
+    if (won) status = '<span class="text-emerald-500">✅ Vaincu</span>';
+    else if (b.id === nowId) status = '<span class="text-edo-orange">⚔️ En cours</span>';
+    else if (b.id > nowId) status = '<span class="opacity-60">⏳ À venir</span>';
+    else status = '<span class="opacity-60">💀 Survécu</span>';
     return `
       <tr>
-        <td>${monthLabelFromId(b.id)}</td>
-        <td class="font-mono">${formatNumber(target)}</td>
-        <td class="font-mono">${formatNumber(achieved)}</td>
-        <td class="font-semibold ${won ? 'text-emerald-500' : 'opacity-60'}">${won ? '✅ Vaincu' : '💀 Survécu'}</td>
+        <td class="whitespace-nowrap">${escapeHtml(monthLabelFromId(b.id))}</td>
+        <td class="font-mono">${formatNumber(s.target)}</td>
+        <td class="font-mono">${formatNumber(s.fromPosts)}</td>
+        <td class="font-mono">${s.manual ? formatNumber(s.manual) : '—'}</td>
+        <td class="font-mono font-semibold">${formatNumber(s.total)} <span class="opacity-40 text-[11px]">(${Math.round(s.pct)} %)</span></td>
+        <td class="font-semibold whitespace-nowrap">${status}</td>
+        <td class="whitespace-nowrap">
+          <button onclick="editBoss('${b.id}')" class="text-edo-orange hover:underline text-xs font-semibold mr-3">Modifier</button>
+          <button onclick="deleteBoss('${b.id}')" class="opacity-30 hover:opacity-70 text-xs">Supprimer</button>
+        </td>
       </tr>`;
   }).join('');
 }
@@ -809,7 +932,15 @@ function platformBadge(platform) {
 }
 
 /* ============ DATE HELPERS ============ */
-function toISO(d) { return d.toISOString().slice(0, 10); }
+// Date locale → "YYYY-MM-DD". (toISOString() convertissait en UTC et décalait
+// "aujourd'hui" d'un jour en heure de Paris.)
+function toISO(d) {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+function parseISO(s) {
+  const [y, m, d] = String(s).split('-').map(Number);
+  return new Date(y, (m || 1) - 1, d || 1);
+}
 function addDays(d, days) { const nd = new Date(d); nd.setDate(nd.getDate() + days); return nd; }
 function todayDate() { const now = new Date(); return new Date(now.getFullYear(), now.getMonth(), now.getDate()); }
 
@@ -820,7 +951,7 @@ function computeRangeDates() {
   return { start: state.range.start, end: state.range.end };
 }
 function computePreviousRangeDates(current) {
-  const start = new Date(current.start), end = new Date(current.end);
+  const start = parseISO(current.start), end = parseISO(current.end);
   const lengthDays = Math.round((end - start) / 86400000) + 1;
   const prevEnd = addDays(start, -1);
   const prevStart = addDays(prevEnd, -(lengthDays - 1));
@@ -1340,21 +1471,142 @@ window.deleteAmbassador = async function (id) {
 
 function medalFor(rank) { return rank === 0 ? '🥇' : rank === 1 ? '🥈' : rank === 2 ? '🥉' : '#' + (rank + 1); }
 
-window.exportAmbassadorsCSV = function () {
+/* ---- Export / import Excel des ambassadeurs ---- */
+window.exportAmbassadorsExcel = function () {
   if (state.ambassadors.length === 0) { alert('Aucun ambassadeur à exporter pour le moment.'); return; }
   const headers = ['Prénom', 'Nom', 'Email', 'Téléphone', 'Points'];
   const rows = [...state.ambassadors]
     .sort((a, b) => num(b.points) - num(a.points))
     .map(a => [a.firstname || '', a.lastname || '', a.email || '', a.phone || '', num(a.points)]);
+  const stamp = toISO(todayDate());
+
+  if (typeof XLSX !== 'undefined') {
+    try {
+      const ws = XLSX.utils.aoa_to_sheet([headers, ...rows]);
+      ws['!cols'] = [{ wch: 16 }, { wch: 18 }, { wch: 32 }, { wch: 16 }, { wch: 10 }];
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, 'Ambassadeurs');
+      XLSX.writeFile(wb, `edo-ambassadeurs-${stamp}.xlsx`);
+      toast('Export Excel (.xlsx) téléchargé', '⬇️');
+      return;
+    } catch (e) { console.error('Export xlsx impossible, repli CSV :', e); }
+  }
+
   const csvEscape = (v) => `"${String(v).replace(/"/g, '""')}"`;
   const csv = [headers, ...rows].map(row => row.map(csvEscape).join(';')).join('\n');
   const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
-  a.href = url; a.download = `edo-ambassadeurs-${toISO(todayDate())}.csv`;
+  a.href = url; a.download = `edo-ambassadeurs-${stamp}.csv`;
   document.body.appendChild(a); a.click(); document.body.removeChild(a);
   setTimeout(() => URL.revokeObjectURL(url), 2000);
-  toast('Export Excel téléchargé', '⬇️');
+  toast('Export CSV téléchargé', '⬇️');
+};
+
+const AMB_ALIASES = {
+  firstname: ['prenom', 'firstname', 'first', 'givenname'],
+  lastname:  ['nom', 'lastname', 'last', 'surname', 'familyname', 'nomdefamille'],
+  email:     ['email', 'mail', 'courriel', 'emailaddress', 'adressemail', 'adresseemail'],
+  phone:     ['telephone', 'tel', 'phone', 'mobile', 'portable', 'gsm', 'numero'],
+  points:    ['points', 'point', 'pts', 'score']
+};
+function normalizeHeader(h) {
+  return String(h || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]/g, '');
+}
+function pickField(row, aliases) {
+  for (const key of Object.keys(row)) {
+    if (aliases.includes(normalizeHeader(key))) return String(row[key] ?? '').trim();
+  }
+  return '';
+}
+
+// Lecture CSV tolérante (séparateur ; , ou tabulation, guillemets, BOM UTF-8)
+function parseCSVToObjects(text) {
+  text = String(text).replace(/^\uFEFF/, '');
+  const first = text.split(/\r?\n/)[0] || '';
+  const counts = { ';': (first.match(/;/g) || []).length, ',': (first.match(/,/g) || []).length, '\t': (first.match(/\t/g) || []).length };
+  const delim = Object.keys(counts).sort((a, b) => counts[b] - counts[a])[0];
+  const rows = [];
+  let row = [], cur = '', inQuotes = false;
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i];
+    if (inQuotes) {
+      if (c === '"') { if (text[i + 1] === '"') { cur += '"'; i++; } else inQuotes = false; }
+      else cur += c;
+    } else if (c === '"') inQuotes = true;
+    else if (c === delim) { row.push(cur); cur = ''; }
+    else if (c === '\n' || c === '\r') {
+      if (c === '\r' && text[i + 1] === '\n') i++;
+      row.push(cur); cur = '';
+      if (row.some(v => v !== '')) rows.push(row);
+      row = [];
+    } else cur += c;
+  }
+  row.push(cur);
+  if (row.some(v => v !== '')) rows.push(row);
+  if (rows.length < 2) return [];
+  const headers = rows[0].map(h => h.trim());
+  return rows.slice(1).map(r => { const o = {}; headers.forEach((h, i) => { o[h] = r[i] ?? ''; }); return o; });
+}
+
+async function readSpreadsheetRows(file) {
+  const name = (file.name || '').toLowerCase();
+  if (name.endsWith('.csv') || name.endsWith('.txt')) return parseCSVToObjects(await file.text());
+  if (typeof XLSX === 'undefined') throw new Error("La librairie Excel n'a pas pu se charger (connexion ?). Importe plutôt un fichier .csv.");
+  const wb = XLSX.read(await file.arrayBuffer(), { type: 'array' });
+  const ws = wb.Sheets[wb.SheetNames[0]];
+  return XLSX.utils.sheet_to_json(ws, { defval: '' });
+}
+
+window.importAmbassadors = async function (evt) {
+  const input = evt.target;
+  const file = input.files && input.files[0];
+  if (!file) return;
+  if (!isConfigured || !db) { alert("Configure Firebase avant d'importer des ambassadeurs."); input.value = ''; return; }
+
+  try {
+    const rows = await readSpreadsheetRows(file);
+    if (!rows.length) { alert("Aucune ligne exploitable : vérifie que la 1re ligne contient les en-têtes (Prénom, Nom, Email, Téléphone, Points)."); return; }
+
+    const nameKey = (f, l) => `${f}|${l}`.toLowerCase().trim();
+    const emails = new Set(state.ambassadors.map(a => String(a.email || '').trim().toLowerCase()).filter(Boolean));
+    const names = new Set(state.ambassadors.map(a => nameKey(a.firstname || '', a.lastname || '')));
+    const toCreate = [];
+    let duplicates = 0, invalid = 0;
+
+    rows.forEach(row => {
+      const firstname = pickField(row, AMB_ALIASES.firstname);
+      const lastname = pickField(row, AMB_ALIASES.lastname);
+      const email = pickField(row, AMB_ALIASES.email);
+      const phone = pickField(row, AMB_ALIASES.phone);
+      const pointsRaw = pickField(row, AMB_ALIASES.points).replace(',', '.').replace(/\s/g, '');
+      if (!firstname && !lastname) { invalid++; return; }
+
+      const eKey = email.toLowerCase();
+      const nKey = nameKey(firstname, lastname);
+      if ((eKey && emails.has(eKey)) || names.has(nKey)) { duplicates++; return; }
+      if (eKey) emails.add(eKey);
+      names.add(nKey);
+
+      const points = Math.max(0, Math.round(Number(pointsRaw) || 0));
+      toCreate.push({ firstname, lastname, email, phone, points });
+    });
+
+    if (!toCreate.length) {
+      alert(`Rien à importer : ${duplicates} doublon(s) ignoré(s), ${invalid} ligne(s) sans nom.`);
+      return;
+    }
+    if (!confirm(`${toCreate.length} ambassadeur(s) vont être ajoutés.\n(${duplicates} doublon(s) et ${invalid} ligne(s) sans nom ignorés.)\n\nContinuer ?`)) return;
+
+    await runInBatches(toCreate.map(a => (batch) => batch.set(doc(ambassadorsCol()), { ...a, createdAt: serverTimestamp() })));
+    toast(`${toCreate.length} ambassadeur(s) importé(s)`, '📥');
+  } catch (e) {
+    console.error(e);
+    reportFirestoreError('edo_ambassadors', e);
+    alert(explainError(e, e && e.message ? `Import impossible : ${e.message}` : "Import impossible pour le moment."));
+  } finally {
+    input.value = '';
+  }
 };
 
 window.renderAmbassadors = function () {
@@ -1403,85 +1655,373 @@ window.renderAmbassadors = function () {
   }).join('');
 };
 
-/* ============ KANBAN ============ */
+/* ============ QUÊTES (KANBAN) ============ */
 document.getElementById('task-form') && document.getElementById('task-form').addEventListener('submit', handleTaskSubmit);
 
-async function handleTaskSubmit(evt) {
-  evt.preventDefault();
-  if (!isConfigured || !db) { alert("Configure Firebase avant d'ajouter une tâche."); return; }
-  const title = (document.getElementById('t-title').value || '').trim();
-  const assignee = (document.getElementById('t-assignee').value || '').trim();
-  const status = document.getElementById('t-status').value;
-  try {
-    await addDoc(tasksCol(), { title, assignee, status, createdAt: serverTimestamp() });
-    evt.target.reset();
-    document.getElementById('t-status').value = status;
-    toast('Nouvelle quête lancée', '⚔️');
-  } catch (e) { console.error(e); alert('Impossible de créer cette tâche pour le moment.'); }
+function getColumns() { return Array.isArray(state.columns) && state.columns.length ? state.columns : DEFAULT_COLUMNS; }
+function columnById(id) { return getColumns().find(c => c.id === id) || null; }
+function normalizeAssignee(v) { const a = String(v || '').trim().toUpperCase(); return ASSIGNEES.includes(a) ? a : ''; }
+// Une étiquette dont la colonne a été supprimée retombe dans la 1re colonne
+function taskColumnId(t) { return columnById(t.status) ? t.status : getColumns()[0].id; }
+function taskCreatedMs(t) { return t.createdAt && typeof t.createdAt.toMillis === 'function' ? t.createdAt.toMillis() : Date.now(); }
+function shortDate(iso) { if (!iso) return ''; const [, m, d] = String(iso).split('-'); return `${d}/${m}`; }
+function closeColMenus() { document.querySelectorAll('details.col-menu[open]').forEach(d => d.removeAttribute('open')); }
+
+function sortTasks(list) {
+  const arr = [...list];
+  const byRecent = (a, b) => taskCreatedMs(b) - taskCreatedMs(a);
+  switch (state.taskSort) {
+    case 'deadline':
+      arr.sort((a, b) => (a.deadline || '9999-99-99').localeCompare(b.deadline || '9999-99-99') || byRecent(a, b));
+      break;
+    case 'assignee': {
+      const rank = (t) => { const i = ASSIGNEES.indexOf(normalizeAssignee(t.assignee)); return i < 0 ? 99 : i; };
+      arr.sort((a, b) => rank(a) - rank(b) || byRecent(a, b));
+      break;
+    }
+    case 'title':
+      arr.sort((a, b) => String(a.title || '').localeCompare(String(b.title || ''), 'fr', { sensitivity: 'base' }));
+      break;
+    default:
+      arr.sort(byRecent);
+  }
+  return arr;
 }
 
-window.deleteTask = async function (id) {
-  if (!confirm('Supprimer cette tâche ?')) return;
-  try { await deleteDoc(doc(db, 'edo_tasks', id)); }
-  catch (e) { console.error(e); alert('Impossible de supprimer cette tâche pour le moment.'); }
-};
-
-async function moveTask(id, newStatus) {
-  try {
-    await updateDoc(doc(db, 'edo_tasks', id), { status: newStatus });
-    if (newStatus === 'valide') toast('Quête validée !', '🏆');
-  } catch (e) { console.error(e); alert('Impossible de déplacer cette tâche pour le moment.'); }
+function deadlineBadgeHtml(iso, isDone) {
+  if (!iso) return '';
+  const diff = Math.round((parseISO(iso) - todayDate()) / 86400000);
+  const short = shortDate(iso);
+  let cls = '', label = '🗓 ' + short;
+  if (isDone) cls = 'dl-done';
+  else if (diff < 0) { cls = 'dl-late'; label = '⚠ En retard · ' + short; }
+  else if (diff === 0) { cls = 'dl-soon'; label = "🗓 Aujourd'hui"; }
+  else if (diff === 1) { cls = 'dl-soon'; label = '🗓 Demain'; }
+  else if (diff <= 3) cls = 'dl-soon';
+  return `<span class="dl-badge ${cls}" title="Deadline : ${escapeHtml(iso)}">${label}</span>`;
 }
 
-window.handleTaskDragStart = function (evt, id) {
-  state.draggedTaskId = id;
-  evt.dataTransfer.effectAllowed = 'move';
-  try { evt.dataTransfer.setData('text/plain', id); } catch (e) {}
-  requestAnimationFrame(() => evt.target.classList.add('dragging'));
-};
-window.handleTaskDragEnd = function (evt) { evt.target.classList.remove('dragging'); state.draggedTaskId = null; };
-window.handleColDragOver = function (evt) { evt.preventDefault(); evt.currentTarget.dataset.dragover = 'true'; };
-window.handleColDragLeave = function (evt) { evt.currentTarget.dataset.dragover = 'false'; };
-window.handleColDrop = function (evt, status) {
-  evt.preventDefault();
-  evt.currentTarget.dataset.dragover = 'false';
-  const id = state.draggedTaskId || (evt.dataTransfer ? evt.dataTransfer.getData('text/plain') : null);
-  if (!id) return;
-  const task = state.tasks.find(t => t.id === id);
-  if (task && task.status !== status) moveTask(id, status);
-};
-
-function initialsOf(name) {
-  const parts = (name || '?').trim().split(/\s+/);
-  return parts.slice(0, 2).map(p => p[0] ? p[0].toUpperCase() : '').join('') || '?';
+function assigneeOptions(selected, emptyLabel) {
+  return `<option value="">${emptyLabel}</option>` +
+    ASSIGNEES.map(a => `<option value="${a}" ${selected === a ? 'selected' : ''}>${a}</option>`).join('');
 }
 
-function taskCardHtml(t) {
+function taskCardHtml(t, col) {
+  const who = normalizeAssignee(t.assignee);
+  const selected = state.selectedTasks.has(t.id);
   return `
-    <div class="kanban-card" draggable="true" ondragstart="handleTaskDragStart(event, '${t.id}')" ondragend="handleTaskDragEnd(event)">
-      <div class="flex items-start justify-between gap-2">
-        <p class="text-sm font-semibold leading-snug">${escapeHtml(t.title || 'Sans titre')}</p>
-        <button onclick="deleteTask('${t.id}')" class="opacity-30 hover:opacity-70 text-xs shrink-0" title="Supprimer">✕</button>
+    <div class="kanban-card ${selected ? 'is-selected' : ''}" data-task-id="${t.id}">
+      <div class="flex items-start gap-2">
+        <input type="checkbox" class="task-check" ${selected ? 'checked' : ''} onclick="event.stopPropagation()" onchange="toggleTaskSelect('${t.id}', this.checked)" title="Sélectionner" aria-label="Sélectionner l'étiquette" />
+        <div class="min-w-0 flex-1 cursor-pointer" onclick="openTaskModal('${t.id}')" title="Ouvrir l'étiquette">
+          <p class="text-sm font-semibold leading-snug break-words">${escapeHtml(t.title || 'Sans titre')}</p>
+          ${t.description ? `<p class="text-[11px] opacity-45 mt-1 line-clamp-2 break-words">${escapeHtml(t.description)}</p>` : ''}
+        </div>
+        <button onclick="deleteTask('${t.id}')" class="opacity-25 hover:opacity-70 text-xs shrink-0" title="Supprimer">✕</button>
+        <span class="task-grip" draggable="true" ondragstart="handleTaskDragStart(event, '${t.id}')" ondragend="handleTaskDragEnd(event)" title="Glisser pour déplacer">⠿</span>
       </div>
-      <div class="flex items-center gap-2 mt-2.5">
-        <span class="w-6 h-6 rounded-full bg-current/10 flex items-center justify-center text-[10px] font-heading font-bold shrink-0 border" style="border-color:var(--table-border)">${escapeHtml(initialsOf(t.assignee))}</span>
-        <span class="text-xs opacity-45 truncate">${escapeHtml(t.assignee || 'Non assigné')}</span>
+      <div class="flex items-center justify-between gap-2 mt-2.5 flex-wrap">
+        <select class="assignee-select" data-who="${who}" onclick="event.stopPropagation()" onchange="setTaskAssignee('${t.id}', this)" title="Attribuer à">${assigneeOptions(who, 'Attribuer…')}</select>
+        ${deadlineBadgeHtml(t.deadline, !!col.done)}
       </div>
     </div>`;
 }
 
-function renderKanban() {
-  TASK_STATUSES.forEach(status => {
-    const container = document.getElementById('col-' + status);
-    const countEl = document.getElementById('count-' + status);
-    if (!container) return;
-    const tasks = state.tasks.filter(t => t.status === status);
-    countEl.textContent = tasks.length;
-    container.innerHTML = tasks.length === 0
-      ? `<p class="text-xs opacity-30 text-center py-6">Colonne vide. Le silence avant le buzz.</p>`
-      : tasks.map(taskCardHtml).join('');
-  });
+function columnHtml(col, idx, total, count, cardsHtml) {
+  return `
+  <div class="hud-kanban-col" data-col-id="${col.id}" ondragover="handleColDragOver(event)" ondragleave="handleColDragLeave(event)" ondrop="handleColDrop(event, '${col.id}')">
+    <div class="hud-kanban-head">
+      <div class="flex items-center gap-2 min-w-0">
+        <p class="truncate">${escapeHtml(col.name)}</p>
+        ${col.done ? '<span class="col-done-tag" title="Colonne terminée : les deadlines n\'y alertent plus">✓</span>' : ''}
+        <span class="hud-kanban-count">${count}</span>
+      </div>
+      <details class="col-menu">
+        <summary title="Options de la colonne" aria-label="Options de la colonne">⋯</summary>
+        <div class="col-menu-panel">
+          <button type="button" onclick="selectColumnTasks('${col.id}')">☑ Tout sélectionner</button>
+          <button type="button" onclick="renameColumn('${col.id}')">✎ Renommer</button>
+          <button type="button" onclick="toggleColumnDone('${col.id}')">${col.done ? '○ Ne plus marquer comme terminée' : '✓ Marquer comme colonne terminée'}</button>
+          <button type="button" onclick="moveColumn('${col.id}', -1)" ${idx === 0 ? 'disabled' : ''}>◀ Déplacer avant</button>
+          <button type="button" onclick="moveColumn('${col.id}', 1)" ${idx === total - 1 ? 'disabled' : ''}>▶ Déplacer après</button>
+          <button type="button" class="danger" onclick="deleteColumn('${col.id}')">🗑 Supprimer la colonne</button>
+        </div>
+      </details>
+    </div>
+    <div class="space-y-2.5 p-3 flex-1">${cardsHtml}</div>
+  </div>`;
 }
+
+function renderTaskSelects() {
+  const cols = getColumns();
+  const opts = cols.map(c => `<option value="${c.id}">${escapeHtml(c.name)}</option>`).join('');
+  const sel = document.getElementById('t-status');
+  if (sel) { const cur = sel.value; sel.innerHTML = opts; if (cols.some(c => c.id === cur)) sel.value = cur; }
+  const bulk = document.getElementById('bulk-move');
+  if (bulk) bulk.innerHTML = '<option value="">Déplacer vers…</option>' + opts;
+}
+
+function updateBulkBar() {
+  const bar = document.getElementById('bulk-bar');
+  if (!bar) return;
+  const n = state.selectedTasks.size;
+  bar.classList.toggle('hidden', n === 0);
+  const label = document.getElementById('bulk-count');
+  if (label) label.textContent = `${n} étiquette${n > 1 ? 's' : ''} sélectionnée${n > 1 ? 's' : ''}`;
+}
+
+function renderKanban() {
+  const board = document.getElementById('kanban-board');
+  if (!board) return;
+  const cols = getColumns();
+  renderTaskSelects();
+
+  // Nettoie la sélection des étiquettes qui n'existent plus
+  const existing = new Set(state.tasks.map(t => t.id));
+  [...state.selectedTasks].forEach(id => { if (!existing.has(id)) state.selectedTasks.delete(id); });
+
+  const byCol = {};
+  cols.forEach(c => { byCol[c.id] = []; });
+  state.tasks.forEach(t => { byCol[taskColumnId(t)].push(t); });
+
+  board.innerHTML = cols.map((col, idx) => {
+    const tasks = sortTasks(byCol[col.id]);
+    const cards = tasks.length
+      ? tasks.map(t => taskCardHtml(t, col)).join('')
+      : '<p class="text-xs opacity-30 text-center py-6">Colonne vide. Le silence avant le buzz.</p>';
+    return columnHtml(col, idx, cols.length, tasks.length, cards);
+  }).join('');
+
+  updateBulkBar();
+}
+
+/* ---- Création / suppression d'étiquettes ---- */
+async function handleTaskSubmit(evt) {
+  evt.preventDefault();
+  if (!isConfigured || !db) { alert("Configure Firebase avant d'ajouter une tâche."); return; }
+  const title = (document.getElementById('t-title').value || '').trim();
+  if (!title) return;
+  const assignee = normalizeAssignee(document.getElementById('t-assignee').value);
+  const deadline = document.getElementById('t-deadline').value || '';
+  const status = document.getElementById('t-status').value || getColumns()[0].id;
+  try {
+    await addDoc(tasksCol(), { title, assignee, deadline, description: '', status, createdAt: serverTimestamp() });
+    evt.target.reset();
+    document.getElementById('t-status').value = status;
+    document.getElementById('t-assignee').dataset.who = '';
+    toast('Nouvelle quête lancée', '⚔️');
+  } catch (e) { reportFirestoreError('edo_tasks', e); alert(explainError(e, 'Impossible de créer cette tâche pour le moment.')); }
+}
+
+window.deleteTask = async function (id) {
+  if (!confirm('Supprimer cette étiquette ?')) return;
+  try { await deleteDoc(doc(db, 'edo_tasks', id)); state.selectedTasks.delete(id); }
+  catch (e) { reportFirestoreError('edo_tasks', e); alert(explainError(e, 'Impossible de supprimer cette étiquette pour le moment.')); }
+};
+
+window.setTaskAssignee = async function (id, selectEl) {
+  const who = normalizeAssignee(selectEl.value);
+  selectEl.dataset.who = who;
+  try { await updateDoc(doc(db, 'edo_tasks', id), { assignee: who }); }
+  catch (e) { reportFirestoreError('edo_tasks', e); alert(explainError(e, "Impossible d'attribuer cette étiquette pour le moment.")); }
+};
+
+window.setTaskSort = function (mode) {
+  state.taskSort = mode;
+  try { localStorage.setItem('edo-task-sort', mode); } catch (e) {}
+  renderKanban();
+};
+
+/* ---- Sélection multiple + suppression / déplacement en masse ---- */
+window.toggleTaskSelect = function (id, checked) {
+  if (checked) state.selectedTasks.add(id); else state.selectedTasks.delete(id);
+  const card = document.querySelector(`.kanban-card[data-task-id="${id}"]`);
+  if (card) card.classList.toggle('is-selected', !!checked);
+  updateBulkBar();
+};
+window.selectAllTasks = function () {
+  const allSelected = state.tasks.length > 0 && state.tasks.every(t => state.selectedTasks.has(t.id));
+  if (allSelected) state.selectedTasks.clear(); else state.tasks.forEach(t => state.selectedTasks.add(t.id));
+  renderKanban();
+};
+window.selectColumnTasks = function (colId) {
+  closeColMenus();
+  state.tasks.filter(t => taskColumnId(t) === colId).forEach(t => state.selectedTasks.add(t.id));
+  renderKanban();
+};
+window.clearTaskSelection = function () { state.selectedTasks.clear(); renderKanban(); };
+
+window.deleteSelectedTasks = async function () {
+  const ids = [...state.selectedTasks];
+  if (!ids.length) return;
+  if (!confirm(`Supprimer définitivement ${ids.length} étiquette${ids.length > 1 ? 's' : ''} ?`)) return;
+  try {
+    await runInBatches(ids.map(id => (batch) => batch.delete(doc(db, 'edo_tasks', id))));
+    state.selectedTasks.clear();
+    renderKanban();
+    toast(`${ids.length} étiquette${ids.length > 1 ? 's' : ''} supprimée${ids.length > 1 ? 's' : ''}`, '🗑️');
+  } catch (e) { reportFirestoreError('edo_tasks', e); alert(explainError(e, 'Impossible de supprimer la sélection pour le moment.')); }
+};
+
+async function moveTasksToColumn(ids, colId) {
+  const toMove = ids.filter(id => { const t = state.tasks.find(x => x.id === id); return t && taskColumnId(t) !== colId; });
+  if (!toMove.length) return;
+  try {
+    await runInBatches(toMove.map(id => (batch) => batch.update(doc(db, 'edo_tasks', id), { status: colId })));
+    const col = columnById(colId);
+    if (col && col.done) toast(toMove.length > 1 ? `${toMove.length} quêtes validées !` : 'Quête validée !', '🏆');
+  } catch (e) { reportFirestoreError('edo_tasks', e); alert(explainError(e, 'Impossible de déplacer cette étiquette pour le moment.')); }
+}
+
+window.moveSelectedTasks = async function (colId) {
+  const sel = document.getElementById('bulk-move');
+  if (!colId) return;
+  await moveTasksToColumn([...state.selectedTasks], colId);
+  if (sel) sel.value = '';
+};
+
+/* ---- Glisser-déposer (poignée ⠿) ---- */
+window.handleTaskDragStart = function (evt, id) {
+  state.draggedTaskId = id;
+  evt.dataTransfer.effectAllowed = 'move';
+  try { evt.dataTransfer.setData('text/plain', id); } catch (e) {}
+  const card = evt.target.closest('.kanban-card');
+  if (card) {
+    try { evt.dataTransfer.setDragImage(card, 24, 18); } catch (e) {}
+    requestAnimationFrame(() => card.classList.add('dragging'));
+  }
+};
+window.handleTaskDragEnd = function () {
+  document.querySelectorAll('.kanban-card.dragging').forEach(c => c.classList.remove('dragging'));
+  document.querySelectorAll('.hud-kanban-col[data-dragover="true"]').forEach(c => { c.dataset.dragover = 'false'; });
+  state.draggedTaskId = null;
+};
+window.handleColDragOver = function (evt) { evt.preventDefault(); evt.currentTarget.dataset.dragover = 'true'; };
+window.handleColDragLeave = function (evt) {
+  if (!evt.currentTarget.contains(evt.relatedTarget)) evt.currentTarget.dataset.dragover = 'false';
+};
+window.handleColDrop = async function (evt, colId) {
+  evt.preventDefault();
+  evt.currentTarget.dataset.dragover = 'false';
+  const dragged = state.draggedTaskId || (evt.dataTransfer ? evt.dataTransfer.getData('text/plain') : null);
+  if (!dragged) return;
+  // Si l'étiquette glissée fait partie d'une sélection multiple, on déplace toute la sélection
+  const ids = (state.selectedTasks.has(dragged) && state.selectedTasks.size > 1) ? [...state.selectedTasks] : [dragged];
+  await moveTasksToColumn(ids, colId);
+};
+
+/* ---- Fenêtre « ouvrir l'étiquette » ---- */
+window.openTaskModal = function (id) {
+  const t = state.tasks.find(x => x.id === id);
+  if (!t) return;
+  state.modalTaskId = id;
+  const who = normalizeAssignee(t.assignee);
+  document.getElementById('tm-title').value = t.title || '';
+  document.getElementById('tm-desc').value = t.description || '';
+  document.getElementById('tm-deadline').value = t.deadline || '';
+  const whoSel = document.getElementById('tm-assignee');
+  whoSel.value = who; whoSel.dataset.who = who;
+  const colSel = document.getElementById('tm-column');
+  colSel.innerHTML = getColumns().map(c => `<option value="${c.id}">${escapeHtml(c.name)}</option>`).join('');
+  colSel.value = taskColumnId(t);
+  document.getElementById('task-modal').classList.remove('hidden');
+};
+window.closeTaskModal = function () {
+  state.modalTaskId = null;
+  const m = document.getElementById('task-modal');
+  if (m) m.classList.add('hidden');
+};
+window.handleTaskModalSubmit = async function (evt) {
+  evt.preventDefault();
+  const id = state.modalTaskId;
+  if (!id) return;
+  const title = (document.getElementById('tm-title').value || '').trim();
+  if (!title) return;
+  const payload = {
+    title,
+    description: (document.getElementById('tm-desc').value || '').trim(),
+    deadline: document.getElementById('tm-deadline').value || '',
+    assignee: normalizeAssignee(document.getElementById('tm-assignee').value),
+    status: document.getElementById('tm-column').value
+  };
+  try {
+    await updateDoc(doc(db, 'edo_tasks', id), payload);
+    closeTaskModal();
+    toast('Étiquette mise à jour', '✏️');
+  } catch (e) { reportFirestoreError('edo_tasks', e); alert(explainError(e, "Impossible d'enregistrer cette étiquette pour le moment.")); }
+};
+window.deleteTaskFromModal = async function () {
+  const id = state.modalTaskId;
+  if (!id) return;
+  if (!confirm('Supprimer cette étiquette ?')) return;
+  try { await deleteDoc(doc(db, 'edo_tasks', id)); closeTaskModal(); }
+  catch (e) { reportFirestoreError('edo_tasks', e); alert(explainError(e, 'Impossible de supprimer cette étiquette pour le moment.')); }
+};
+
+/* ---- Colonnes : ajout, renommage, ordre, suppression ---- */
+async function saveColumns(newColumns, okMsg) {
+  try {
+    await setDoc(boardDoc(), { columns: newColumns }, { merge: true });
+    if (okMsg) toast(okMsg, '🗂️');
+  } catch (e) { reportFirestoreError('app_settings/taskBoard', e); alert(explainError(e, 'Impossible de modifier les colonnes pour le moment.')); }
+}
+
+window.addColumn = async function (evt) {
+  if (evt) evt.preventDefault();
+  if (!isConfigured || !db) { alert('Configure Firebase avant de modifier les colonnes.'); return; }
+  const input = document.getElementById('new-col-name');
+  const name = (input.value || '').trim().slice(0, 30);
+  if (!name) return;
+  const id = 'col_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
+  await saveColumns([...getColumns().map(c => ({ ...c })), { id, name, done: false }], 'Colonne ajoutée');
+  input.value = '';
+};
+
+window.renameColumn = async function (id) {
+  closeColMenus();
+  const col = columnById(id);
+  if (!col) return;
+  const name = (prompt('Nouveau nom de la colonne :', col.name) || '').trim().slice(0, 30);
+  if (!name || name === col.name) return;
+  await saveColumns(getColumns().map(c => c.id === id ? { ...c, name } : c), 'Colonne renommée');
+};
+
+window.toggleColumnDone = async function (id) {
+  closeColMenus();
+  await saveColumns(getColumns().map(c => c.id === id ? { ...c, done: !c.done } : c));
+};
+
+window.moveColumn = async function (id, dir) {
+  closeColMenus();
+  const cols = getColumns().map(c => ({ ...c }));
+  const i = cols.findIndex(c => c.id === id);
+  const j = i + dir;
+  if (i < 0 || j < 0 || j >= cols.length) return;
+  [cols[i], cols[j]] = [cols[j], cols[i]];
+  await saveColumns(cols);
+};
+
+window.deleteColumn = async function (id) {
+  closeColMenus();
+  const cols = getColumns();
+  if (cols.length <= 1) { alert('Il faut garder au moins une colonne.'); return; }
+  const col = columnById(id);
+  if (!col) return;
+  const remaining = cols.filter(c => c.id !== id);
+  const fallback = remaining[0];
+  const affected = state.tasks.filter(t => t.status === id);
+  const msg = affected.length
+    ? `Supprimer la colonne « ${col.name} » ?\nSes ${affected.length} étiquette(s) seront déplacées dans « ${fallback.name} ».`
+    : `Supprimer la colonne « ${col.name} » ?`;
+  if (!confirm(msg)) return;
+  try {
+    const batch = writeBatch(db);
+    affected.forEach(t => batch.update(doc(db, 'edo_tasks', t.id), { status: fallback.id }));
+    batch.set(boardDoc(), { columns: remaining }, { merge: true });
+    await batch.commit();
+    toast('Colonne supprimée', '🗑️');
+  } catch (e) { reportFirestoreError('app_settings/taskBoard', e); alert(explainError(e, 'Impossible de supprimer cette colonne pour le moment.')); }
+};
 
 /* ============ BRAND CENTER ============ */
 window.copyHex = function (hex) {
@@ -1496,5 +2036,15 @@ function init() {
   if (dateField) dateField.value = toISO(todayDate());
   renderMetricsGrid();
   renderFollowers();
+  resetBossForm();
+  const sortSel = document.getElementById('task-sort');
+  if (sortSel) sortSel.value = state.taskSort;
+  renderKanban();
+
+  // Ferme les menus de colonnes au clic extérieur, la fenêtre d'étiquette avec Échap
+  document.addEventListener('click', (e) => {
+    document.querySelectorAll('details.col-menu[open]').forEach(d => { if (!d.contains(e.target)) d.removeAttribute('open'); });
+  });
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeTaskModal(); });
 }
 init();
