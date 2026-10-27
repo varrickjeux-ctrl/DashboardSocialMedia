@@ -336,3 +336,60 @@ html.dark .dl-late { color: #F87171; }
 }
 
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+
+
+/* ==========================================================================
+   FONCTIONNALITÉS V6 — rappels, analyses, paliers, succès, filtres, médias…
+   ========================================================================== */
+.chip { display: inline-block; font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 4px; background: var(--input-bg); border: 1px solid var(--input-border); color: var(--text); margin-left: 4px; vertical-align: middle; }
+.chip-warn { background: rgba(255,162,0,0.16); border-color: rgba(255,162,0,0.5); color: #B45F00; }
+.chip-ok { background: rgba(16,185,129,0.14); border-color: rgba(16,185,129,0.5); color: #059669; }
+html.dark .chip-warn { color: #FFB84D; }
+html.dark .chip-ok { color: #34d399; }
+
+/* Cloche de rappels */
+.bell-badge { position: absolute; top: -6px; right: -6px; min-width: 16px; height: 16px; padding: 0 4px; border-radius: 9999px; background: #FFA200; color: #000; font-size: 9px; font-weight: 800; display: flex; align-items: center; justify-content: center; font-family: 'JetBrains Mono', monospace; }
+.reminders-panel { position: absolute; right: 0; top: 36px; z-index: 40; width: min(340px, 86vw); max-height: 70vh; overflow-y: auto; background: var(--bg); color: var(--text); border: 1px solid var(--panel-border); border-radius: 8px; box-shadow: 0 16px 40px rgba(0,0,0,0.3); }
+.reminder-item { display: flex; gap: 10px; align-items: flex-start; width: 100%; padding: 9px 12px; font-size: 12.5px; border-top: 1px solid var(--table-border); }
+.reminder-item:hover { background: var(--table-hover); }
+.reminder-late { border-left: 3px solid #DC2626; }
+.reminder-today { border-left: 3px solid #FFA200; }
+.reminder-soon { border-left: 3px solid rgba(255,195,0,0.8); }
+
+/* Paliers du boss */
+.boss-tick { position: absolute; top: 0; bottom: 0; width: 2px; background: rgba(255,255,255,0.55); pointer-events: none; }
+
+/* Analyses */
+.an-row { display: grid; grid-template-columns: 8.5rem 1fr auto; gap: 10px; align-items: center; font-size: 12px; }
+.an-label { font-weight: 600; }
+.an-bar { height: 8px; border-radius: 9999px; background: var(--input-bg); border: 1px solid var(--input-border); overflow: hidden; }
+.an-bar i { display: block; height: 100%; background: linear-gradient(90deg, #FFA200, #FFC300); border-radius: 9999px; }
+.an-val { font-family: 'JetBrains Mono', monospace; font-weight: 700; white-space: nowrap; }
+.an-row-best .an-label, .an-row-best .an-val { color: #C26A00; }
+html.dark .an-row-best .an-label, html.dark .an-row-best .an-val { color: #FFC300; }
+.an-row-empty { opacity: .35; }
+
+/* Barre de progression lisible en clair / sombre (challenge) */
+.xp-track-light { height: 10px; border-radius: 9999px; background: var(--input-bg); border: 1px solid var(--input-border); overflow: hidden; }
+.xp-fill-light { height: 100%; background: linear-gradient(90deg, #FFA200, #FFC300); border-radius: 9999px; transition: width .6s ease; }
+
+/* Filtres (idées, quêtes, médias) */
+.filter-chip { font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 700; padding: 5px 10px; border-radius: 9999px; border: 1px solid var(--input-border); background: var(--input-bg); color: var(--text); }
+.filter-chip:hover { border-color: rgba(255,162,0,0.6); }
+.filter-chip.is-active { background: linear-gradient(135deg,#FFA200,#FFC300); color: #000; border-color: transparent; }
+.fav-btn { font-size: 18px; line-height: 1; opacity: .4; }
+.fav-btn.is-fav { opacity: 1; color: #FFA200; }
+.task-filter-btn .tf-inner, .media-type-btn .tf-inner { display: block; padding: 7px 12px; border-radius: 2px; font-size: 12.5px; font-weight: 700; white-space: nowrap; }
+.task-filter-btn[data-active="true"] .tf-inner, .media-type-btn[data-active="true"] .tf-inner { background: linear-gradient(135deg,#FFA200,#FFC300); color: #000; }
+.task-filter-btn[data-active="false"] .tf-inner, .media-type-btn[data-active="false"] .tf-inner { opacity: .55; }
+
+/* Checklist, historique ambassadeur */
+.check-row { display: flex; align-items: center; gap: 8px; padding: 6px 8px; border: 1px solid var(--table-border); border-radius: 4px; background: var(--input-bg); }
+.amb-log-row { display: flex; align-items: center; gap: 10px; padding: 8px 4px; border-bottom: 1px solid var(--table-border); }
+
+/* Succès + classement d'équipe */
+.ach-card { display: flex; gap: 12px; align-items: flex-start; padding: 12px; border: 1px solid var(--panel-border); border-radius: 6px; background: var(--panel-bg); opacity: .6; filter: grayscale(.6); }
+.ach-card.is-unlocked { opacity: 1; filter: none; border-color: rgba(255,195,0,0.7); box-shadow: 0 0 18px rgba(255,195,0,0.08); }
+.ach-icon { font-size: 26px; line-height: 1; }
+.team-me td { background: rgba(255,162,0,0.08); }
+.comp-own td { background: rgba(255,162,0,0.07); }
