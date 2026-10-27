@@ -1,0 +1,26 @@
+{
+  "name": "EDO // COMMAND — Communication EDO Campus",
+  "short_name": "EDO COMMAND",
+  "description": "Centre de contrôle réseaux sociaux de l'équipe communication EDO Campus.",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#000000",
+  "theme_color": "#000000",
+  "lang": "fr",
+  "icons": [
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}
