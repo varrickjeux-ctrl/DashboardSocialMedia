@@ -1,48 +1,18 @@
 /* ==========================================================================
-   FIREBASE — À CONFIGURER AVANT DÉPLOIEMENT
-   --------------------------------------------------------------------------
-   1. Projet Firebase > Firestore activé > Authentication activé (fournisseur
-      "Email/Password") > crée les comptes de ton équipe côté console.
-   2. Colle ta config web dans l'objet firebaseConfig juste en dessous.
-   3. Règles Firestore (accès réservé aux comptes authentifiés) :
+   EDO//COMMAND — app.js
+   FIREBASE — règles Firestore (console Firebase > Firestore > Règles) :
 
       rules_version = '2';
       service cloud.firestore {
         match /databases/{database}/documents {
-          match /social_posts/{id}    { allow read, write: if request.auth != null; }
-          match /edo_editorial/{id}   { allow read, write: if request.auth != null; }
-          match /swipe_file/{id}      { allow read, write: if request.auth != null; }
-          match /edo_ambassadors/{id} { allow read, write: if request.auth != null; }
-          match /edo_tasks/{id}       { allow read, write: if request.auth != null; }
-          match /edo_bosses/{id}      { allow read, write: if request.auth != null; }
-          match /edo_users/{id}       { allow read, write: if request.auth != null; }
-          match /edo_media/{id}       { allow read, write: if request.auth != null; }
-          match /edo_competitors/{id} { allow read, write: if request.auth != null; }
-          match /edo_activity/{id}    { allow read, write: if request.auth != null; }
-          match /app_settings/{id}    { allow read, write: if request.auth != null; }
+          match /{document=**} { allow read, write: if request.auth != null; }
         }
       }
 
-   4. Collections : "social_posts", "edo_editorial", "swipe_file",
-      "edo_ambassadors", "edo_tasks", "edo_bosses", "edo_users", "app_settings",
-      "edo_media", "edo_competitors", "edo_activity"
-      (créées automatiquement au premier enregistrement).
-      ⚠️ Chaque collection DOIT figurer dans tes règles : une collection absente
-      est refusée par Firestore (erreur "permission-denied", désormais affichée
-      à l'écran). Les colonnes du kanban sont stockées dans app_settings/taskBoard.
-
-      Raccourci équivalent si tu veux tout couvrir d'un coup :
-        match /{document=**} { allow read, write: if request.auth != null; }
-
-      Durcissement optionnel des rôles (admin / member) : dans edo_users/{uid}, le champ
-      "role" vaut "admin" ou "member" (absent = admin). Pour que les membres ne puissent
-      pas supprimer côté serveur, remplace "allow read, write" des collections sensibles
-      (social_posts, edo_ambassadors, edo_bosses…) par :
-        allow read, create, update: if request.auth != null;
-        allow delete: if request.auth != null
-          && get(/databases/$(database)/documents/edo_users/$(request.auth.uid)).data.get('role', 'admin') == 'admin';
-      Et interdis qu'un membre modifie son propre rôle sur edo_users/{uid} (comparer
-      request.resource.data.role à resource.data.role).
+   (Raccourci qui couvre toutes les collections, dont le nouveau chat « edo_chat ».)
+   Collections : social_posts, edo_editorial, swipe_file, edo_ambassadors, edo_tasks,
+   edo_bosses, edo_users, app_settings, edo_media, edo_competitors, edo_activity, edo_chat
+   Rôles : champ "role" ("admin" ou "member") dans edo_users/{uid} ; absent = admin.
    ========================================================================== */
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
@@ -54,7 +24,6 @@ import {
   getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
-/* ⚠️ Complète cet objet avec tes clés Firebase (Console > Paramètres du projet > SDK) */
 const firebaseConfig = {
   apiKey: "AIzaSyAnc2-tFoPV0WjziXyHjJJIlF-OUKEYCh0",
   authDomain: "dashboardedo.firebaseapp.com",
@@ -82,28 +51,36 @@ if (isConfigured) {
   document.getElementById('connection-text').textContent = 'FIREBASE NON CONFIGURÉ';
 }
 
+const $ = (id) => document.getElementById(id);
+
 const postsCol = () => collection(db, 'social_posts');
 const editoCol = () => collection(db, 'edo_editorial');
 const swipeCol = () => collection(db, 'swipe_file');
 const ambassadorsCol = () => collection(db, 'edo_ambassadors');
 const tasksCol = () => collection(db, 'edo_tasks');
 const bossesCol = () => collection(db, 'edo_bosses');
+const mediaCol = () => collection(db, 'edo_media');
+const competitorsCol = () => collection(db, 'edo_competitors');
+const activityCol = () => collection(db, 'edo_activity');
+const chatCol = () => collection(db, 'edo_chat');
 const settingsDoc = () => doc(db, 'app_settings', 'counters');
 const boardDoc = () => doc(db, 'app_settings', 'taskBoard');
 const followersHistoryDoc = () => doc(db, 'app_settings', 'followersHistory');
 const rewardsDoc = () => doc(db, 'app_settings', 'rewards');
 const challengeDoc = () => doc(db, 'app_settings', 'ambassadorChallenge');
-const mediaCol = () => collection(db, 'edo_media');
-const competitorsCol = () => collection(db, 'edo_competitors');
-const activityCol = () => collection(db, 'edo_activity');
 const userDoc = () => doc(db, 'edo_users', currentUser.uid);
 
 /* ============ THÈME CLAIR / SOMBRE ============ */
 window.toggleTheme = function () {
-  const html = document.documentElement;
-  const nowDark = html.classList.toggle('dark');
+  const nowDark = document.documentElement.classList.toggle('dark');
   try { localStorage.setItem('edo-theme', nowDark ? 'dark' : 'light'); } catch (e) {}
 };
+
+/* ============ PETITS OUTILS ============ */
+function safeUrl(u) { u = String(u || '').trim(); return /^https?:\/\//i.test(u) ? u : ''; }
+// Monnaie : 1 XP gagné = 0,5 🪙 (arrondi, minimum 1)
+const coinsFor = (xp) => Math.max(1, Math.round(xp / 2));
+const xpGain = (xp) => ({ xp: increment(xp), coins: increment(coinsFor(xp)), coinsEarned: increment(coinsFor(xp)) });
 
 /* ============ CONFIG PLATEFORMES ============ */
 const PLATFORM_CONFIG = {
@@ -122,8 +99,11 @@ const BREADCRUMB = {
   taches: { title: 'Quêtes', sub: "Le kanban de l'équipe" },
   brand: { title: 'Brand Center', sub: 'Rester on-brand en toutes circonstances' },
   equipe: { title: 'Équipe', sub: "Classement d'XP et succès de la guilde" },
-  medias: { title: 'Médias & veille', sub: 'Banque d\'images et comptes à surveiller' },
-  outils: { title: 'Outils', sub: 'Rapports, sauvegarde, rôles et journal' }
+  medias: { title: 'Médias & veille', sub: "Banque d'images et comptes à surveiller" },
+  outils: { title: 'Outils', sub: 'Rapports, sauvegarde, rôles et journal' },
+  profil: { title: 'Profil', sub: 'Fiche joueur' },
+  boutique: { title: 'Boutique', sub: 'Dépense tes pièces' },
+  chat: { title: 'Chat', sub: "La discussion de l'équipe" }
 };
 
 /* ---- Kanban : personnes attribuables + colonnes par défaut ---- */
@@ -137,16 +117,20 @@ const DEFAULT_COLUMNS = [
 function loadTaskSort() { try { return localStorage.getItem('edo-task-sort') || 'recent'; } catch (e) { return 'recent'; } }
 const CHART_METRICS = { views: { label: 'vues' }, likes: { label: 'likes' }, comments: { label: 'commentaires' }, engagement: { label: "taux d'engagement" } };
 
-/* ============ SYSTÈME XP / NIVEAUX / TITRES ============ */
+/* ============ XP / NIVEAUX / TITRES ============ */
 const LEVELS = [
-  { level: 1, xp: 0,    title: "Stagiaire de l'ombre" },
-  { level: 2, xp: 100,  title: 'Posteur Débutant' },
-  { level: 3, xp: 250,  title: 'Chasseur de Reach' },
-  { level: 4, xp: 450,  title: 'Stratège Social' },
-  { level: 5, xp: 700,  title: 'Maître du Feed' },
-  { level: 6, xp: 1000, title: "Architecte d'Engagement" },
-  { level: 7, xp: 1400, title: 'Oracle des Algorithmes' },
-  { level: 8, xp: 2000, title: "Dompteur d'Algorithme" }
+  { level: 1,  xp: 0,    title: "Stagiaire de l'ombre" },
+  { level: 2,  xp: 100,  title: 'Posteur Débutant' },
+  { level: 3,  xp: 250,  title: 'Chasseur de Reach' },
+  { level: 4,  xp: 450,  title: 'Stratège Social' },
+  { level: 5,  xp: 700,  title: 'Maître du Feed' },
+  { level: 6,  xp: 1000, title: "Architecte d'Engagement" },
+  { level: 7,  xp: 1400, title: 'Oracle des Algorithmes' },
+  { level: 8,  xp: 2000, title: "Dompteur d'Algorithme" },
+  { level: 9,  xp: 2800, title: 'Légende du Réseau' },
+  { level: 10, xp: 3800, title: 'Mythe Vivant' },
+  { level: 11, xp: 5000, title: 'Archimage du Buzz' },
+  { level: 12, xp: 6500, title: 'Dieu du Feed' }
 ];
 
 function getLevelInfo(xp) {
@@ -160,6 +144,7 @@ function getLevelInfo(xp) {
   return { level: current.level, title: current.title, xp, nextXp: next ? next.xp : null, pct };
 }
 
+// >>> FIN DU BLOC 1 — colle ensuite le bloc 2 juste en dessous <<<
 /* ============ BANQUE DE 100 QUÊTES JOURNALIÈRES ============ */
 const QUEST_XP_CYCLE = [15, 20, 25, 10, 30];
 const QUEST_TEXTS = [
@@ -212,8 +197,7 @@ function pickDailyQuests() {
   return picked;
 }
 
-/* ---- Constantes des fonctionnalités ---- */
-const $ = (id) => document.getElementById(id);
+/* ============ CONSTANTES DES FONCTIONNALITÉS ============ */
 const POST_FORMATS = ['Reel', 'Carrousel', 'Story', 'Post simple', 'Vidéo', 'Autre'];
 const WEEKDAYS = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche'];
 const TIME_SLOTS = [
@@ -231,19 +215,79 @@ const AMB_TIERS = [
   { min: 600, name: 'Platine', icon: '💎' }
 ];
 const BOSS_MILESTONES = [{ pct: 25, xp: 25 }, { pct: 50, xp: 50 }, { pct: 75, xp: 75 }, { pct: 100, xp: 200 }];
-const ACHIEVEMENTS = [
-  { id: 'first_post',     icon: '🚀', name: 'Premier post',           desc: 'Ajouter ta première publication',           xp: 20,  goal: 1,  value: c => c.p.postsAdded },
-  { id: 'posts_10',       icon: '📈', name: 'Machine à posts',         desc: 'Ajouter 10 publications',                   xp: 50,  goal: 10, value: c => c.p.postsAdded },
-  { id: 'posts_50',       icon: '👑', name: 'Légende du feed',         desc: 'Ajouter 50 publications',                   xp: 150, goal: 50, value: c => c.p.postsAdded },
-  { id: 'streak_7',       icon: '🔥', name: '7 jours de suite',        desc: "Publier 7 jours d'affilée",                 xp: 60,  goal: 7,  value: c => c.streak },
-  { id: 'month_10',       icon: '📅', name: '10 posts dans le mois',   desc: '10 publications sur le mois en cours',      xp: 60,  goal: 10, value: c => c.monthPosts },
-  { id: 'quests_10',      icon: '✅', name: 'Quêtes du quotidien',     desc: 'Valider 10 quêtes journalières',            xp: 40,  goal: 10, value: c => c.p.questsDone },
-  { id: 'quests_50',      icon: '🛡️', name: "Routine d'acier",         desc: 'Valider 50 quêtes journalières',            xp: 120, goal: 50, value: c => c.p.questsDone },
-  { id: 'boss_slayer',    icon: '👹', name: 'Tueur de Boss',           desc: 'Vaincre un Boss mensuel',                   xp: 100, goal: 1,  value: c => c.bossWins },
-  { id: 'recruiter',      icon: '🤝', name: 'Recruteur',               desc: 'Recruter 5 ambassadeurs',                   xp: 40,  goal: 5,  value: c => c.p.ambRecruited },
-  { id: 'task_master',    icon: '🗂️', name: 'Chef de quêtes',          desc: 'Terminer 10 étiquettes du kanban',          xp: 50,  goal: 10, value: c => c.p.tasksDone },
-  { id: 'planner',        icon: '🧭', name: 'Planificateur',           desc: 'Planifier 5 posts dans le calendrier édito', xp: 30,  goal: 5,  value: c => c.p.planned },
-  { id: 'idea_collector', icon: '💡', name: "Chasseur d'idées",        desc: 'Ajouter 5 idées à la banque',               xp: 30,  goal: 5,  value: c => c.p.ideasAdded }
+
+const EDITO_STATUS = {
+  todo:      { icon: '⏳', label: 'À faire',   head: 'Posts à prévoir' },
+  scheduled: { icon: '🕒', label: 'Programmé', head: 'Programmés' },
+  posted:    { icon: '✅', label: 'Posté',     head: 'Postés' }
+};
+function editoStatus(i) { return i.status || (i.done ? 'posted' : 'todo'); }
+
+/* ============ SUCCÈS (~80) : chacun donne XP + pièces, certains un TITRE ============ */
+const ROMAN = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X', 'XI'];
+// [clé, icône, nom, description ({n} = objectif), valeur, paliers, titres par palier (null = aucun)]
+const ACH_FAMILIES = [
+  ['posts', '🚀', 'Posteur', 'Ajouter {n} publications', c => c.p.postsAdded, [1, 5, 10, 25, 50, 100, 250], ['Premier Pas', null, null, 'Plume du Feed', null, 'Centurion', 'Légende du Feed']],
+  ['streak', '🔥', 'Flamme', "Publier {n} jours d'affilée", c => c.streak, [3, 7, 14, 30, 60], [null, 'Étincelle', null, 'Brasier Vivant', 'Phénix']],
+  ['month', '📅', 'Rythme', '{n} posts dans le mois', c => c.monthPosts, [5, 10, 20, 30], [null, null, 'Métronome', 'Infatigable']],
+  ['quests', '✅', 'Routine', 'Valider {n} quêtes journalières', c => c.p.questsDone, [1, 10, 25, 50, 100, 250], [null, 'Discipliné', null, "Routine d'Acier", null, 'Moine du Quotidien']],
+  ['tasks', '🗂️', 'Chef de quêtes', 'Terminer {n} étiquettes', c => c.p.tasksDone, [1, 10, 25, 50, 100, 250], [null, 'Organisateur', null, 'Maître du Kanban', null, 'Seigneur des Quêtes']],
+  ['amb', '🤝', 'Recruteur', 'Recruter {n} ambassadeurs', c => c.p.ambRecruited, [1, 5, 15, 30, 60], [null, 'Rabatteur', null, 'Chef de Meute', 'Général des Ambassadeurs']],
+  ['plan', '🧭', 'Planificateur', 'Planifier {n} posts', c => c.p.planned, [1, 5, 20, 50, 100], [null, null, 'Stratège', 'Grand Stratège', 'Oracle du Calendrier']],
+  ['idea', '💡', "Chasseur d'idées", 'Ajouter {n} idées', c => c.p.ideasAdded, [1, 5, 20, 50], [null, null, 'Cerveau Créatif', 'Muse']],
+  ['boss', '👹', 'Tueur de Boss', 'Vaincre {n} Boss', c => c.bossWins, [1, 3, 6, 12], ['Tueur de Boss', null, 'Pourfendeur', 'Fléau des Boss']],
+  ['gold', '🪙', 'Fortune', 'Gagner {n} pièces au total', c => c.p.coinsEarned, [50, 200, 500, 1500, 5000], [null, null, 'Marchand', 'Banquier', 'Magnat']],
+  ['lvl', '🎖️', 'Niveau', 'Atteindre le niveau {n}', c => c.level, [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12], []],
+  ['chat', '💬', 'Bavard', 'Envoyer {n} messages', c => c.p.chatCount, [1, 25, 100, 500], [null, null, 'Moulin à Paroles', 'Voix de la Guilde']],
+  ['spell', '🪄', 'Apprenti sorcier', 'Lancer {n} sorts', c => c.p.spellsCast, [1, 10, 50, 200], [null, 'Sorcier', null, 'Archimage']],
+  ['shop', '🛍️', 'Client fidèle', 'Acheter {n} objets', c => c.p.bought, [1, 5, 10, 25], [null, null, 'Collectionneur', 'Fashion Victim']],
+  ['ttl', '🏷️', 'Titulaire', 'Posséder {n} titres', c => (c.p.titles || []).length, [3, 10, 20], [null, 'Chasseur de Titres', 'Titre Suprême']],
+  ['cls', '⚔️', 'Aventurier', 'Choisir une classe', c => c.p.class ? 1 : 0, [1], ['Aventurier']],
+  ['frm', '🖼️', 'Encadré', 'Équiper un cadre', c => c.p.frame ? 1 : 0, [1], []],
+  ['gear', '🛡️', 'Équipé', "Équiper 4 pièces d'équipement", c => Object.values(c.p.equip || {}).filter(Boolean).length, [4], ['Chevalier Complet']]
+];
+const ACHIEVEMENTS = ACH_FAMILIES.flatMap(([k, icon, name, desc, value, tiers, titles]) => tiers.map((goal, i) => ({
+  id: `${k}_${goal}`, icon, name: tiers.length > 1 ? `${name} ${ROMAN[i]}` : name,
+  desc: desc.replace('{n}', goal), goal, value, xp: 20 * (i + 1), title: titles[i] || null
+})));
+
+// >>> FIN DU BLOC 2 — colle ensuite le bloc 3 juste en dessous <<<
+/* ============ CLASSES, BOUTIQUE, SORTS (définitions) ============ */
+const CLASSES = [
+  { id: 'guerrier', icon: '🛡️', name: 'Guerrier du Feed', desc: 'Régulier et solide, pilier des publications.' },
+  { id: 'mage', icon: '🔮', name: 'Mage du Contenu', desc: 'Transforme une idée en buzz.' },
+  { id: 'rodeur', icon: '🏹', name: 'Rôdeur de Veille', desc: 'Repère les tendances avant tout le monde.' },
+  { id: 'barde', icon: '🎶', name: 'Barde Créatif', desc: 'Vidéo, voix, énergie : il fait vibrer la guilde.' },
+  { id: 'alchimiste', icon: '⚗️', name: 'Alchimiste Data', desc: "Les stats n'ont aucun secret pour lui." }
+];
+
+const SHOP = [
+  ...[['f_neon', 'Néon', 60, 1], ['f_gold', 'Or', 150, 3], ['f_fire', 'Flammes', 250, 5], ['f_ice', 'Glace', 250, 5], ['f_rainbow', 'Arc-en-ciel', 500, 8]]
+    .map(([id, label, price, lvl]) => ({ id, cat: 'frame', label, price, lvl })),
+  ...[['🦊', 40, 1], ['🤖', 80, 2], ['👾', 80, 2], ['🦉', 100, 2], ['🐉', 120, 3], ['🦄', 120, 3], ['🧙', 150, 4], ['🐺', 150, 4], ['🚀', 200, 5], ['👑', 500, 8]]
+    .map(([icon, price, lvl]) => ({ id: 'l_' + icon, cat: 'logo', label: 'Logo', icon, price, lvl })),
+  ...[['head', '🧢', 'Casquette', 40, 1], ['head', '🎩', 'Haut-de-forme', 50, 1], ['head', '🎓', 'Mortier', 90, 3], ['head', '🪖', 'Casque', 120, 4], ['head', '👑', 'Couronne', 400, 8],
+      ['weapon', '🗡️', 'Dague', 60, 1], ['weapon', '🏹', 'Arc', 120, 3], ['weapon', '🪄', 'Baguette', 150, 3], ['weapon', '⚔️', 'Épées croisées', 150, 3], ['weapon', '🔱', 'Trident', 350, 7],
+      ['armor', '🥋', 'Kimono', 70, 1], ['armor', '🦺', 'Gilet', 90, 2], ['armor', '🧥', 'Manteau', 110, 3], ['armor', '🛡️', 'Bouclier', 200, 5],
+      ['pet', '🐱', 'Chat', 80, 2], ['pet', '🐶', 'Chien', 80, 2], ['pet', '🦜', 'Perroquet', 100, 3], ['pet', '🐲', 'Dragonnet', 450, 8]]
+    .map(([slot, icon, label, price, lvl]) => ({ id: slot + '_' + icon, cat: 'gear', slot, icon, label, price, lvl })),
+  ...[['Roi du Reel', 80, 2], ['Prince du Carrousel', 80, 2], ['Baron des Hashtags', 150, 4], ['Gardien du Brand Book', 150, 4], ['Maître de la Story', 200, 5],
+      ['Ninja du Community Management', 300, 6], ['Seigneur des Algorithmes', 600, 9]]
+    .map(([label, price, lvl]) => ({ id: 't_' + label, cat: 'title', label, icon: '🏷️', price, lvl }))
+];
+const ITEM = Object.fromEntries(SHOP.map(i => [i.id, i]));
+const CAT_LABEL = { frame: '🖼️ Cadres', logo: '🦊 Logos', gear: '🛡️ Équipement', title: '🏷️ Titres' };
+let shopCat = 'frame';
+
+// cd = temps de recharge en minutes ; xp = récompense (sorts à XP)
+const SPELLS = [
+  { id: 'confetti', lvl: 2, icon: '🎉', name: 'Pluie de confettis', cd: 1, run: () => rain(['🎉', '✨', '🎊', '⭐']) },
+  { id: 'fire', lvl: 3, icon: '🔥', name: 'Boule de feu sur le Boss', cd: 1, run: () => { const b = $('boss-bar'); b.classList.remove('shake'); void b.offsetWidth; b.classList.add('shake'); rain(['🔥']); } },
+  { id: 'focus', lvl: 4, icon: '🧘', name: 'Mode Focus (on/off)', cd: 1, run: () => document.body.classList.toggle('focus-mode') },
+  { id: 'coins', lvl: 5, icon: '💰', name: 'Pluie de pièces', cd: 1, run: () => rain(['🪙']) },
+  { id: 'bless', lvl: 6, icon: '🙏', name: 'Bénédiction du jour (+10 XP)', cd: 1440, xp: 10, run: () => rain(['🙏', '✨']) },
+  { id: 'frost', lvl: 7, icon: '🧊', name: 'Gel du temps (10 s)', cd: 2, run: () => { document.body.classList.add('frost'); setTimeout(() => document.body.classList.remove('frost'), 10000); } },
+  { id: 'meteor', lvl: 8, icon: '🌋', name: 'Météore (+25 XP / semaine)', cd: 10080, xp: 25, run: () => rain(['☄️', '🔥', '💥']) }
 ];
 
 /* ============ STATE ============ */
@@ -277,7 +321,9 @@ let state = {
   modalChecklist: [],
   profileLoaded: false,
   claiming: new Set(),
-  editingCompId: null
+  editingCompId: null,
+  chat: [],
+  viewUid: null
 };
 
 let lineChart = null;
@@ -306,7 +352,7 @@ function reportFirestoreError(label, err) {
 }
 function explainError(err, fallback) {
   const code = err && err.code ? err.code : '';
-  if (code === 'permission-denied') return `${fallback}\n\nFirestore refuse l'accès : ajoute cette collection dans tes règles de sécurité (voir le commentaire en haut de app.js).`;
+  if (code === 'permission-denied') return `${fallback}\n\nFirestore refuse l'accès : vérifie les règles de sécurité (voir le commentaire en haut de app.js).`;
   return code ? `${fallback}\n(code : ${code})` : fallback;
 }
 async function runInBatches(ops, size = 400) {
@@ -317,6 +363,7 @@ async function runInBatches(ops, size = 400) {
   }
 }
 
+// >>> FIN DU BLOC 3 — colle ensuite le bloc 4 juste en dessous <<<
 /* ============ AUTHENTIFICATION ============ */
 document.getElementById('login-form') && document.getElementById('login-form').addEventListener('submit', handleLogin);
 
@@ -376,9 +423,7 @@ function showLogin() {
   document.getElementById('login-error').classList.add('hidden');
 }
 
-// NOTE : app-shell reste un bloc simple (jamais display:flex) — la sidebar est
-// en position fixed, donc main (margin-left) occupe seul toute la largeur
-// restante. Ne jamais y ajouter une classe flex, sinon un vide apparaît à droite.
+// NOTE : app-shell reste un bloc simple (jamais display:flex) — la sidebar est en position fixed.
 function showApp() {
   const loading = document.getElementById('loading-screen');
   const shell = document.getElementById('app-shell');
@@ -460,7 +505,7 @@ async function ensureUserProfile() {
     const snap = await getDoc(userDoc());
     if (!snap.exists()) {
       const defaultPseudo = (currentUser.email || 'Joueur').split('@')[0];
-      await setDoc(userDoc(), { pseudo: defaultPseudo, xp: 0, dailyQuests: null, createdAt: serverTimestamp() });
+      await setDoc(userDoc(), { pseudo: defaultPseudo, xp: 0, coins: 0, coinsEarned: 0, dailyQuests: null, createdAt: serverTimestamp() });
     }
   } catch (e) { console.error('Erreur création profil utilisateur :', e); }
 }
@@ -471,8 +516,7 @@ function initListeners() {
 
   ensureUserProfile();
 
-  // Chaque écouteur est indépendant : une erreur sur une collection
-  // (ex. règle Firestore manquante) n'empêche plus les autres de démarrer.
+  // Chaque écouteur est indépendant : une erreur sur une collection n'empêche pas les autres de démarrer.
   const listen = (label, source, onData) => {
     try {
       unsubscribers.push(onSnapshot(source, onData, (err) => {
@@ -497,6 +541,8 @@ function initListeners() {
 
   listen('edo_editorial', query(editoCol(), orderBy('date', 'asc')), (snap) => {
     state.editorial = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    renderEditoStrip();
+    autoPublishDue();
     renderReminders();
     if (state.activeTab === 'edito') renderEdito();
   });
@@ -563,6 +609,8 @@ function initListeners() {
   listen('edo_users (équipe)', collection(db, 'edo_users'), (snap) => {
     state.users = snap.docs.map(d => ({ id: d.id, ...d.data() }));
     if (state.activeTab === 'equipe') renderTeam();
+    if (state.activeTab === 'profil') renderProfilePage();
+    if (state.activeTab === 'chat') renderChat();
   });
 
   listen('edo_media', mediaCol(), (snap) => {
@@ -580,6 +628,11 @@ function initListeners() {
     if (state.activeTab === 'outils') renderActivity();
   });
 
+  listen('edo_chat', query(chatCol(), orderBy('at', 'desc'), limit(100)), (snap) => {
+    state.chat = snap.docs.map(d => ({ id: d.id, ...d.data() })).reverse();
+    if (state.activeTab === 'chat') renderChat();
+  });
+
   listen('edo_users', userDoc(), (snap) => {
     if (snap.exists()) {
       state.profile = snap.data() || {};
@@ -589,8 +642,11 @@ function initListeners() {
       renderBossBar();
       checkAchievements();
       renderRole();
+      renderSpellBar();
       if (state.activeTab === 'equipe') renderTeam();
       if (state.activeTab === 'outils') renderActivity();
+      if (state.activeTab === 'profil') renderProfilePage();
+      if (state.activeTab === 'boutique') renderShop();
     }
   });
 }
@@ -603,7 +659,8 @@ function setConnectionStatus(ok) {
   else { dot.className = 'w-1.5 h-1.5 rounded-full bg-red-400'; text.textContent = 'ERREUR'; }
 }
 
-/* ============ PROFIL JOUEUR (XP / NIVEAU / TITRE) ============ */
+// >>> FIN DU BLOC 4 — colle ensuite le bloc 5 juste en dessous <<<
+/* ============ PROFIL JOUEUR (XP / NIVEAU / TITRE / PIÈCES) ============ */
 function renderProfile() {
   const info = getLevelInfo(state.profile.xp || 0);
   const pseudoEl = document.getElementById('profile-pseudo');
@@ -611,12 +668,14 @@ function renderProfile() {
   const levelEl = document.getElementById('level-label');
   const xpFill = document.getElementById('xp-fill');
   const xpCaption = document.getElementById('xp-caption');
+  const coinsEl = document.getElementById('coins-label');
 
   if (pseudoEl) pseudoEl.textContent = state.profile.pseudo || 'Joueur';
-  if (titleEl) titleEl.textContent = info.title;
+  if (titleEl) titleEl.textContent = ((CLASSES.find(c => c.id === state.profile.class) || {}).icon || '') + ' ' + displayTitle(state.profile);
   if (levelEl) levelEl.textContent = 'NIVEAU ' + info.level;
   if (xpFill) xpFill.style.width = info.pct + '%';
   if (xpCaption) xpCaption.textContent = info.nextXp ? `${info.xp} / ${info.nextXp} XP` : `${info.xp} XP — NIVEAU MAX`;
+  if (coinsEl) coinsEl.textContent = '🪙 ' + formatNumber(state.profile.coins || 0);
 
   const dates = new Set(state.posts.map(p => p.date).filter(Boolean));
   let streak = 0, cursor = todayDate();
@@ -629,11 +688,11 @@ function pulseXpBar() {
   const xpFill = $('xp-fill');
   if (xpFill) { xpFill.classList.remove('xp-pulse'); void xpFill.offsetWidth; xpFill.classList.add('xp-pulse'); }
 }
-// Ajoute de l'XP et/ou incrémente des compteurs du profil (succès, stats perso)
+// Ajoute de l'XP (+ pièces) et/ou incrémente des compteurs du profil (succès, stats perso)
 async function awardXp(amount, counters) {
   if (!isConfigured || !db || !currentUser) return;
   const upd = {};
-  if (amount) upd.xp = increment(amount);
+  if (amount) Object.assign(upd, xpGain(amount));
   Object.entries(counters || {}).forEach(([k, v]) => { upd[k] = increment(v); });
   if (!Object.keys(upd).length) return;
   try {
@@ -697,10 +756,9 @@ window.completeQuest = async function (index) {
   const updatedQuests = dq.quests.map((q, i) => i === index ? { ...q, done: true } : q);
 
   try {
-    await updateDoc(userDoc(), { dailyQuests: { date: dq.date, quests: updatedQuests }, xp: increment(quest.xp), questsDone: increment(1) });
-    toast(`+${quest.xp} XP — quête accomplie`, '✅');
-    const xpFill = document.getElementById('xp-fill');
-    if (xpFill) { xpFill.classList.remove('xp-pulse'); void xpFill.offsetWidth; xpFill.classList.add('xp-pulse'); }
+    await updateDoc(userDoc(), { dailyQuests: { date: dq.date, quests: updatedQuests }, ...xpGain(quest.xp), questsDone: increment(1) });
+    toast(`+${quest.xp} XP · +${coinsFor(quest.xp)} 🪙 — quête accomplie`, '✅');
+    pulseXpBar();
   } catch (e) { console.error(e); alert('Impossible de valider cette quête pour le moment.'); }
 };
 
@@ -764,7 +822,7 @@ function renderBossBar() {
   claimBossMilestones(monthId, s);
 }
 
-// Chaque joueur touche lui-même l'XP de chaque palier (clé « mois:palier » stockée dans son profil)
+// Chaque joueur touche lui-même l'XP + pièces de chaque palier (clé « mois:palier » stockée dans son profil)
 function claimBossMilestones(monthId, s) {
   if (!state.profileLoaded || !currentUser || !db) return;
   const claimed = Array.isArray(state.profile.claimed) ? state.profile.claimed : [];
@@ -772,7 +830,7 @@ function claimBossMilestones(monthId, s) {
     const key = `${monthId}:${m.pct}`;
     if (s.pct < m.pct || claimed.includes(key) || state.claiming.has(key)) return;
     state.claiming.add(key);
-    updateDoc(userDoc(), { claimed: arrayUnion(key), xp: increment(m.xp) })
+    updateDoc(userDoc(), { claimed: arrayUnion(key), ...xpGain(m.xp) })
       .then(() => {
         const reward = state.rewards[m.pct];
         toast(m.pct === 100 ? `👹 BOSS VAINCU ! +${m.xp} XP` : `Palier ${m.pct} % atteint ! +${m.xp} XP`, m.pct === 100 ? '🏆' : '🎯');
@@ -798,7 +856,7 @@ $('rewards-form') && $('rewards-form').addEventListener('submit', async (evt) =>
     await setDoc(rewardsDoc(), data);
     toast("Récompenses d'équipe enregistrées", '🎁');
     logActivity('Récompenses boss', Object.values(data).filter(Boolean).join(' / '));
-  } catch (e) { reportFirestoreError('app_settings', e); alert(explainError(e, 'Impossible d\'enregistrer les récompenses pour le moment.')); }
+  } catch (e) { reportFirestoreError('app_settings', e); alert(explainError(e, "Impossible d'enregistrer les récompenses pour le moment.")); }
 });
 
 document.getElementById('boss-form') && document.getElementById('boss-form').addEventListener('submit', handleBossSubmit);
@@ -894,6 +952,7 @@ function renderBossHistory() {
   }).join('');
 }
 
+// >>> FIN DU BLOC 5 — colle ensuite le bloc 6 juste en dessous <<<
 /* ============ ANIMATION HELPER ============ */
 function replay(elId) {
   const el = document.getElementById(elId);
@@ -902,10 +961,10 @@ function replay(elId) {
   requestAnimationFrame(() => requestAnimationFrame(() => el.classList.remove('fade-out')));
 }
 
-/* ============ TABS ============ */
+/* ============ ONGLETS ============ */
 window.switchTab = function (tab) {
   state.activeTab = tab;
-  ['dashboard', 'arene', 'calendrier', 'edito', 'idees', 'ambassadeurs', 'taches', 'brand', 'equipe', 'medias', 'outils'].forEach(t => {
+  ['dashboard', 'arene', 'calendrier', 'edito', 'idees', 'ambassadeurs', 'taches', 'brand', 'equipe', 'medias', 'outils', 'profil', 'boutique', 'chat'].forEach(t => {
     const s = document.getElementById('view-' + t);
     if (s) s.dataset.visible = (t === tab);
   });
@@ -931,6 +990,9 @@ window.switchTab = function (tab) {
   if (tab === 'equipe') renderTeam();
   if (tab === 'medias') { renderMedia(); renderCompetitors(); }
   if (tab === 'outils') { renderActivity(); renderRole(); }
+  if (tab === 'profil') renderProfilePage();
+  if (tab === 'boutique') renderShop();
+  if (tab === 'chat') renderChat();
 };
 
 window.toggleMoreSheet = function () {
@@ -966,7 +1028,7 @@ function renderFollowers() {
   if (i) i.textContent = new Intl.NumberFormat('fr-FR').format(state.followers.instagram || 0);
 }
 
-/* ============ FORM POSTS (Dashboard RS) ============ */
+/* ============ FORMULAIRE DES POSTS (Dashboard RS) ============ */
 function fillFormatSelects() {
   const opts = '<option value="">— Non précisé</option>' + POST_FORMATS.map(f => `<option value="${f}">${f}</option>`).join('');
   ['f-format', 'e-format'].forEach(id => { const el = $(id); if (el) el.innerHTML = opts; });
@@ -1027,7 +1089,7 @@ async function handleSubmit(evt) {
       cancelEdit();
     } else {
       await addDoc(postsCol(), { ...payload, statsPending: false, uid: currentUser ? currentUser.uid : '', createdAt: serverTimestamp() });
-      toast('+50 XP — publication ajoutée', '🎮');
+      toast(`+50 XP · +${coinsFor(50)} 🪙 — publication ajoutée`, '🎮');
       awardXp(50, { postsAdded: 1 });
       logActivity('Post ajouté', `${payload.title} (${platformConfig(payload.platform).label})`);
       evt.target.reset();
@@ -1077,7 +1139,7 @@ window.deletePost = async function (id) {
   catch (e) { reportFirestoreError('social_posts', e); alert(explainError(e, 'Impossible de supprimer cette publication pour le moment.')); }
 };
 
-/* ============ CSV EXPORT ============ */
+/* ============ EXPORT CSV ============ */
 window.exportPostsCSV = function () {
   if (state.posts.length === 0) { alert('Aucune donnée à exporter pour le moment.'); return; }
   const headers = ['Date', 'Plateforme', 'Titre', 'Vues', 'Likes', 'Commentaires', 'Metrique_A', 'Metrique_B', 'Interactions', 'Engagement_%', 'Format', 'Heure'];
@@ -1096,7 +1158,7 @@ window.exportPostsCSV = function () {
   toast('Export CSV téléchargé', '⬇️');
 };
 
-/* ============ METRICS HELPERS ============ */
+/* ============ OUTILS DE CALCUL ============ */
 function num(v) { return typeof v === 'number' && !isNaN(v) ? v : 0; }
 function interactions(post) { return num(post.likes) + num(post.comments) + num(post.metricA) + num(post.metricB); }
 function likesComments(post) { return num(post.likes) + num(post.comments); }
@@ -1110,9 +1172,8 @@ function platformBadge(platform) {
   return `<span class="inline-flex items-center gap-1.5 text-[11px] font-mono font-semibold px-2 py-1 rounded ${isInsta ? 'bg-edo-orange/15 text-edo-orange' : 'bg-current/10'}">${cfg.label.toUpperCase()}</span>`;
 }
 
-/* ============ DATE HELPERS ============ */
-// Date locale → "YYYY-MM-DD". (toISOString() convertissait en UTC et décalait
-// "aujourd'hui" d'un jour en heure de Paris.)
+/* ============ DATES ============ */
+// Date locale → "YYYY-MM-DD" (évite le décalage UTC en heure de Paris)
 function toISO(d) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
@@ -1171,6 +1232,7 @@ function postsInDateRange(range) {
 }
 function filterByPlatform(posts, subview) { return subview === 'global' ? posts : posts.filter(p => p.platform === subview); }
 
+// >>> FIN DU BLOC 6 — colle ensuite le bloc 7 juste en dessous <<<
 /* ============ KPIs ============ */
 function computeKPIs(posts) {
   const totalViews = posts.reduce((s, p) => s + num(p.views), 0);
@@ -1214,7 +1276,7 @@ function renderKPIs(range, prevRange) {
   return currentPosts;
 }
 
-/* ============ CHART ============ */
+/* ============ GRAPHIQUE ============ */
 function dailyValue(dayPosts, metric) {
   if (metric === 'engagement') {
     const v = dayPosts.reduce((s, p) => s + num(p.views), 0);
@@ -1285,7 +1347,7 @@ function renderRanking(elId, posts, valueFn, formatFn) {
     </li>`).join('');
 }
 
-/* ============ TABLE (historique) ============ */
+/* ============ TABLEAU (historique) ============ */
 function renderDashboardTable(posts) {
   const tbody = $('dashboard-table');
   const empty = $('dashboard-empty');
@@ -1336,14 +1398,14 @@ function renderDashboard() {
 }
 
 /* ============ CALENDRIER SUIVI ============ */
+const MONTH_NAMES = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'];
+
 window.shiftMonth = function (delta) {
   let m = state.calendar.month + delta, y = state.calendar.year;
   if (m < 0) { m = 11; y -= 1; } if (m > 11) { m = 0; y += 1; }
   state.calendar.month = m; state.calendar.year = y; state.calendar.selectedDate = null;
   renderCalendar();
 };
-
-const MONTH_NAMES = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'];
 
 function renderCalendar() {
   if (state.calendar.year === null) {
@@ -1403,40 +1465,39 @@ function renderCalDayPanel(iso) {
     </div>`).join('');
 }
 
+// >>> FIN DU BLOC 7 — colle ensuite le bloc 8 juste en dessous <<<
 /* ============ CALENDRIER ÉDITO ============ */
-window.toggleEditoForm = function () { document.getElementById('edito-form').classList.toggle('hidden'); };
+window.toggleEditoForm = function () { $('edito-form').classList.toggle('hidden'); };
 
-window.setEditoPlatform = function (platform) {
-  state.editoPlatform = platform;
-  document.getElementById('e-btn-instagram').dataset.active = (platform === 'instagram');
-  document.getElementById('e-btn-linkedin').dataset.active = (platform === 'linkedin');
+window.setEditoPlatform = function (p) {
+  $('e-pf-instagram').checked = (p === 'instagram');
+  $('e-pf-linkedin').checked = (p === 'linkedin');
 };
 
-document.getElementById('edito-form') && document.getElementById('edito-form').addEventListener('submit', handleEditoSubmit);
+$('edito-form') && $('edito-form').addEventListener('submit', handleEditoSubmit);
 
 async function handleEditoSubmit(evt) {
   evt.preventDefault();
   if (!isConfigured || !db) { alert('Configure Firebase avant de planifier un post.'); return; }
-
-  const payload = {
-    date: $('e-date').value,
-    platform: state.editoPlatform,
-    subject: ($('e-subject').value || '').trim(),
-    description: ($('e-description').value || '').trim(),
-    format: $('e-format').value || '',
-    time: $('e-time').value || ''
+  const pfs = ['instagram', 'linkedin'].filter(p => $('e-pf-' + p).checked);
+  if (!pfs.length) { alert('Coche au moins une plateforme.'); return; }
+  const base = {
+    date: $('e-date').value, subject: ($('e-subject').value || '').trim(),
+    description: ($('e-description').value || '').trim(), format: $('e-format').value || '',
+    time: $('e-time').value || '', status: $('e-status').value || 'todo'
   };
-
   try {
     if (state.editoEditingId) {
-      await updateDoc(doc(db, 'edo_editorial', state.editoEditingId), payload);
+      const cur = state.editorial.find(e => e.id === state.editoEditingId);
+      if (cur && editoStatus(cur) === 'posted') delete base.status;   // un post déjà publié garde son statut
+      await updateDoc(doc(db, 'edo_editorial', state.editoEditingId), { ...base, platform: pfs[0] });
       toast('Planification mise à jour', '✏️');
       cancelEditoEdit();
     } else {
-      await addDoc(editoCol(), { ...payload, done: false, createdAt: serverTimestamp() });
-      toast('Post planifié', '🗓️');
-      bumpCounter('planned');
-      logActivity('Post planifié', `${payload.subject} (${payload.date})`);
+      await Promise.all(pfs.map(platform => addDoc(editoCol(), { ...base, platform, done: false, createdAt: serverTimestamp() })));
+      toast(pfs.length > 1 ? '2 posts planifiés (Instagram + LinkedIn)' : 'Post planifié', '🗓️');
+      bumpCounter('planned', pfs.length);
+      logActivity('Post planifié', `${base.subject} (${base.date})`);
       evt.target.reset();
       $('e-date').value = '';
       setEditoPlatform('instagram');
@@ -1457,6 +1518,7 @@ window.editEditoItem = function (id) {
   $('e-description').value = item.description || '';
   $('e-format').value = item.format || '';
   $('e-time').value = item.time || '';
+  $('e-status').value = editoStatus(item) === 'scheduled' ? 'scheduled' : 'todo';
   setEditoPlatform(item.platform || 'instagram');
   window.scrollTo({ top: 0, behavior: 'smooth' });
 };
@@ -1470,30 +1532,56 @@ window.cancelEditoEdit = function () {
   setEditoPlatform('instagram');
 };
 
-const editoInFlight = new Set();
-// Cocher « Fait » crée automatiquement la ligne dans le suivi (stats à saisir ensuite)
-window.toggleEditoDone = async function (id, current) {
-  if (editoInFlight.has(id)) return;
-  editoInFlight.add(id);
-  try {
-    const item = state.editorial.find(e => e.id === id);
-    await updateDoc(doc(db, 'edo_editorial', id), { done: !current });
-    if (!current && item && !item.postId) {
-      const ref = await addDoc(postsCol(), {
-        date: item.date || toISO(todayDate()), platform: item.platform || 'instagram', title: item.subject || 'Sans titre',
-        views: 0, likes: 0, comments: 0, metricA: 0, metricB: 0,
-        format: item.format || '', time: item.time || '', statsPending: true, fromEdito: id,
-        uid: currentUser ? currentUser.uid : '', createdAt: serverTimestamp()
-      });
-      await updateDoc(doc(db, 'edo_editorial', id), { postId: ref.id });
-      toast('Publié ! Ajouté au suivi — pense à saisir les stats', '📊');
-      logActivity('Post publié (édito)', item.subject || '');
-    } else {
-      toast(!current ? 'Marqué comme fait' : 'Remis à faire', !current ? '✅' : '↩️');
-    }
-  } catch (e) { reportFirestoreError('edo_editorial', e); alert(explainError(e, 'Impossible de mettre à jour ce statut pour le moment.')); }
-  finally { editoInFlight.delete(id); }
+// Clic sur une case vide du calendrier → formulaire pré-rempli à cette date
+window.planOnDate = function (iso) {
+  cancelEditoEdit();
+  $('edito-form').classList.remove('hidden');
+  $('e-date').value = iso;
+  $('edito-form').scrollIntoView({ behavior: 'smooth', block: 'center' });
 };
+
+/* ---- Statut : À faire → Programmé → Posté (crée la ligne dans le dashboard) ---- */
+const editoInFlight = new Set();
+async function markPosted(item) {
+  if (editoInFlight.has(item.id)) return;
+  editoInFlight.add(item.id);
+  try {
+    const postId = item.postId || 'edito_' + item.id;   // id fixe = jamais de doublon
+    await setDoc(doc(db, 'social_posts', postId), {
+      date: item.date || toISO(todayDate()), platform: item.platform || 'instagram', title: item.subject || 'Sans titre',
+      format: item.format || '', time: item.time || '', statsPending: true, fromEdito: item.id,
+      uid: currentUser ? currentUser.uid : '', createdAt: serverTimestamp()
+    }, { merge: true });
+    await updateDoc(doc(db, 'edo_editorial', item.id), { status: 'posted', done: true, postId });
+    toast(`Posté : ${escapeHtml(item.subject || '')} — pense à saisir les stats`, '📊');
+    logActivity('Post publié (édito)', item.subject || '');
+  } catch (e) { reportFirestoreError('edo_editorial', e); }
+  finally { editoInFlight.delete(item.id); }
+}
+
+window.toggleEditoDone = async function (id) {
+  const item = state.editorial.find(e => e.id === id);
+  if (!item) return;
+  const s = editoStatus(item);
+  const set = (status) => updateDoc(doc(db, 'edo_editorial', id), { status, done: false }).catch(e => reportFirestoreError('edo_editorial', e));
+  if (s === 'todo') await set('scheduled');
+  else if (s === 'scheduled') await markPosted(item);
+  else await set('todo');
+};
+
+// Ouvre le formulaire de stats du dashboard pour le post lié
+window.openStats = function (postId) { switchTab('dashboard'); setTimeout(() => editPost(postId), 80); };
+
+// Passage automatique en « posté » à la date/heure prévues (vérifié chaque minute, app ouverte)
+function autoPublishDue() {
+  if (!db || !currentUser) return;
+  const now = Date.now();
+  state.editorial.forEach(e => {
+    if (editoStatus(e) !== 'scheduled' || !e.date) return;
+    if (new Date(`${e.date}T${e.time || '00:00'}:00`).getTime() <= now) markPosted(e);
+  });
+}
+setInterval(autoPublishDue, 60000);
 
 window.deleteEditoItem = async function (id) {
   if (!confirm('Supprimer cette publication planifiée ?')) return;
@@ -1501,53 +1589,55 @@ window.deleteEditoItem = async function (id) {
   catch (e) { console.error(e); alert('Impossible de supprimer cet élément pour le moment.'); }
 };
 
+function editoBtn(i) {
+  const s = editoStatus(i), m = EDITO_STATUS[s];
+  return `<button class="edito-done-btn shrink-0" data-done="${s === 'posted'}" onclick="toggleEditoDone('${i.id}')" title="Changer le statut">${m.icon} ${m.label.toUpperCase()}</button>`;
+}
+function editoStatsBtn(i) {
+  return i.postId ? `<button type="button" class="text-edo-orange hover:underline text-xs font-semibold shrink-0" onclick="openStats('${i.postId}')">📊 Stats</button>` : '';
+}
+
 window.shiftEditoMonth = function (delta) {
   let m = state.editoCalendar.month + delta, y = state.editoCalendar.year;
   if (m < 0) { m = 11; y -= 1; } if (m > 11) { m = 0; y += 1; }
   state.editoCalendar.month = m; state.editoCalendar.year = y; state.editoCalendar.selectedDate = null;
-  const panel = document.getElementById('edito-cal-day-panel');
+  const panel = $('edito-cal-day-panel');
   if (panel) panel.classList.add('hidden');
   renderEditoCalendar();
 };
 
-function editoDotClass(item) {
-  if (item.done) return 'cal-dot-done';
-  return item.platform === 'instagram' ? 'bg-edo-orange' : 'cal-dot-neutral';
-}
-
 function renderEditoCalendar() {
   if (state.editoCalendar.year === null) {
-    const today = todayDate();
-    state.editoCalendar.year = today.getFullYear(); state.editoCalendar.month = today.getMonth();
+    const t = todayDate();
+    state.editoCalendar.year = t.getFullYear(); state.editoCalendar.month = t.getMonth();
   }
   const { year, month } = state.editoCalendar;
-  const label = document.getElementById('edito-cal-month-label');
+  const label = $('edito-cal-month-label');
   if (label) label.textContent = MONTH_NAMES[month] + ' ' + year;
 
-  const firstOfMonth = new Date(year, month, 1);
-  const daysInMonth = new Date(year, month + 1, 0).getDate();
-  const leadOffset = (firstOfMonth.getDay() + 6) % 7;
-
+  const lead = (new Date(year, month, 1).getDay() + 6) % 7, days = new Date(year, month + 1, 0).getDate();
   const cells = [];
-  for (let i = 0; i < leadOffset; i++) cells.push(null);
-  for (let d = 1; d <= daysInMonth; d++) cells.push(d);
-  while (cells.length % 7 !== 0) cells.push(null);
+  for (let i = 0; i < lead; i++) cells.push(null);
+  for (let d = 1; d <= days; d++) cells.push(d);
+  while (cells.length % 7) cells.push(null);
 
-  const grid = document.getElementById('edito-cal-grid');
+  const grid = $('edito-cal-grid');
   if (!grid) return;
-
+  const todayIso = toISO(todayDate());
   grid.innerHTML = cells.map(d => {
-    if (d === null) return `<div class="cal-cell"></div>`;
+    if (d === null) return '<div class="cal-cell"></div>';
     const iso = `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
-    const dayItems = state.editorial.filter(e => e.date === iso);
-    const hasItems = dayItems.length > 0;
-    const selected = state.editoCalendar.selectedDate === iso;
-    const dots = dayItems.slice(0, 6).map(item => `<span class="cal-dot ${editoDotClass(item)}" title="${escapeHtml(item.subject || '')}"></span>`).join('');
-    return `
-      <div class="cal-cell" data-has-post="${hasItems}" data-selected="${selected}" onclick="${hasItems ? `selectEditoCalDay('${iso}')` : ''}">
-        <span class="cal-day-num">${d}</span>
-        <div class="flex flex-wrap gap-1">${dots}</div>
-      </div>`;
+    const items = state.editorial.filter(e => e.date === iso).sort((a, b) => (a.time || '').localeCompare(b.time || ''));
+    const chips = items.map(i => {
+      const s = editoStatus(i);
+      return `<button type="button" class="cal-chip cal-chip-${s}" onclick="event.stopPropagation();selectEditoCalDay('${iso}')" title="${escapeHtml(i.subject || '')}">
+        <b>${escapeHtml(i.subject || 'Sans sujet')}</b>
+        <span>${platformConfig(i.platform).label} · ${EDITO_STATUS[s].icon} ${EDITO_STATUS[s].label}${i.time ? ' · ' + escapeHtml(i.time) : ''}</span></button>`;
+    }).join('');
+    const numStyle = iso === todayIso ? ' style="color:#FFA200;opacity:1;font-weight:800"' : '';
+    return `<div class="cal-cell cal-cell-big" data-has-post="${items.length > 0}" data-selected="${state.editoCalendar.selectedDate === iso}"
+        onclick="${items.length ? `selectEditoCalDay('${iso}')` : `planOnDate('${iso}')`}">
+      <span class="cal-day-num"${numStyle}>${d}</span><div class="flex flex-col gap-1">${chips}</div></div>`;
   }).join('');
 
   replay('edito-cal-wrapper');
@@ -1557,34 +1647,31 @@ function renderEditoCalendar() {
 window.selectEditoCalDay = function (iso) {
   state.editoCalendar.selectedDate = (state.editoCalendar.selectedDate === iso) ? null : iso;
   renderEditoCalendar();
-  if (state.editoCalendar.selectedDate) renderEditoCalDayPanel(state.editoCalendar.selectedDate);
-  else document.getElementById('edito-cal-day-panel').classList.add('hidden');
+  if (!state.editoCalendar.selectedDate) $('edito-cal-day-panel').classList.add('hidden');
 };
 
 function renderEditoCalDayPanel(iso) {
-  const panel = document.getElementById('edito-cal-day-panel');
-  const dayItems = state.editorial.filter(e => e.date === iso);
+  const panel = $('edito-cal-day-panel');
   panel.classList.remove('hidden');
-  document.getElementById('edito-cal-day-title').textContent = 'Planifié le ' + iso;
-  document.getElementById('edito-cal-day-posts').innerHTML = dayItems.map(item => `
-    <div class="flex items-center justify-between border rounded px-3 py-2 gap-3" style="border-color:var(--table-border)">
+  $('edito-cal-day-title').textContent = 'Planifié le ' + iso;
+  $('edito-cal-day-posts').innerHTML = state.editorial.filter(e => e.date === iso).map(item => `
+    <div class="flex items-center justify-between border rounded px-3 py-2 gap-3 flex-wrap" style="border-color:var(--table-border)">
       <div class="flex items-center gap-2 min-w-0">${platformBadge(item.platform)}<p class="text-sm truncate">${escapeHtml(item.subject || 'Sans sujet')}</p></div>
-      <button class="edito-done-btn shrink-0" data-done="${!!item.done}" onclick="toggleEditoDone('${item.id}', ${!!item.done})">${item.done ? '✅ FAIT' : '⏳ À FAIRE'}</button>
+      <div class="flex items-center gap-3">${editoBtn(item)}${editoStatsBtn(item)}
+        <button onclick="editEditoItem('${item.id}')" class="text-edo-orange hover:underline text-xs font-semibold">Modifier</button></div>
     </div>`).join('');
 }
 
 function renderEdito() {
-  const list = document.getElementById('edito-list');
-  const empty = document.getElementById('edito-empty');
+  const list = $('edito-list'), empty = $('edito-empty');
   renderEditoCalendar();
   if (!list) return;
   const sorted = [...state.editorial].sort((a, b) => (a.date || '').localeCompare(b.date || ''));
-
   if (sorted.length === 0) { list.innerHTML = ''; empty.classList.remove('hidden'); return; }
   empty.classList.add('hidden');
 
   list.innerHTML = sorted.map(item => `
-    <div class="edito-row p-4" data-done="${!!item.done}">
+    <div class="edito-row p-4" data-done="${editoStatus(item) === 'posted'}">
       <div class="flex items-start gap-4 flex-wrap">
         <div class="font-mono text-xs opacity-50 shrink-0 pt-0.5">${escapeHtml(item.date || '—')}</div>
         ${platformBadge(item.platform)}
@@ -1592,13 +1679,29 @@ function renderEdito() {
           <p class="text-sm font-semibold">${escapeHtml(item.subject || 'Sans sujet')}${item.format ? ` <span class="chip">${escapeHtml(item.format)}</span>` : ''}${item.time ? ` <span class="chip">${escapeHtml(item.time)}</span>` : ''}${item.postId ? ' <span class="chip chip-ok">📊 dans le suivi</span>' : ''}</p>
           ${item.description ? `<p class="text-xs opacity-50 mt-1 leading-relaxed">${escapeHtml(item.description)}</p>` : ''}
         </div>
-        <div class="flex items-center gap-2 shrink-0">
-          <button class="edito-done-btn" data-done="${!!item.done}" onclick="toggleEditoDone('${item.id}', ${!!item.done})">${item.done ? '✅ FAIT' : '⏳ À FAIRE'}</button>
+        <div class="flex items-center gap-2 shrink-0 flex-wrap">
+          ${editoBtn(item)}${editoStatsBtn(item)}
           <button onclick="editEditoItem('${item.id}')" class="text-edo-orange hover:underline text-xs font-semibold">Modifier</button>
           <button onclick="deleteEditoItem('${item.id}')" class="opacity-30 hover:opacity-70 text-xs">✕</button>
         </div>
       </div>
     </div>`).join('');
+}
+
+/* ---- Ligne « à prévoir / programmés / postés » (onglet Quêtes) ---- */
+function renderEditoStrip() {
+  const el = $('edito-strip');
+  if (!el) return;
+  el.innerHTML = Object.entries(EDITO_STATUS).map(([k, m]) => {
+    const all = state.editorial.filter(e => editoStatus(e) === k).sort((a, b) => (a.date || '').localeCompare(b.date || ''));
+    const list = k === 'posted' ? all.slice(-5) : all.slice(0, 8);
+    return `<div class="hud-kanban-col" style="min-height:0">
+      <div class="hud-kanban-head"><p>${m.icon} ${m.head}</p><span class="hud-kanban-count">${all.length}</span></div>
+      <div class="p-3 space-y-1.5">${list.length ? list.map(e => `<button type="button" class="edito-mini" onclick="switchTab('edito')">
+        <span class="truncate">${escapeHtml(e.subject || 'Sans sujet')}</span>
+        <span class="font-mono opacity-50 shrink-0">${escapeHtml(shortDate(e.date))} · ${platformConfig(e.platform).label.slice(0, 2).toUpperCase()}</span></button>`).join('')
+        : '<p class="text-xs opacity-30 text-center py-2">Rien ici.</p>'}</div></div>`;
+  }).join('');
 }
 
 /* ============ BANQUE D'IDÉES (swipe file) ============ */
@@ -1678,7 +1781,7 @@ function renderSwipeGrid() {
     return `
       <div class="hud-panel p-4 flex flex-col gap-2">
         <div class="flex items-start justify-between gap-2">
-          <a href="${escapeHtml(s.url)}" target="_blank" rel="noopener" class="text-sm font-semibold text-edo-orange hover:underline truncate">${escapeHtml(host)}</a>
+          <a href="${escapeHtml(safeUrl(s.url))}" target="_blank" rel="noopener" class="text-sm font-semibold text-edo-orange hover:underline truncate">${escapeHtml(host)}</a>
           <button type="button" class="fav-btn ${s.fav ? 'is-fav' : ''}" onclick="toggleIdeaFav('${s.id}', ${!!s.fav})" title="Favori">${s.fav ? '★' : '☆'}</button>
         </div>
         <p class="text-sm opacity-70 leading-snug">${escapeHtml(s.note)}</p>
@@ -1695,6 +1798,7 @@ function renderSwipeGrid() {
   replay('swipe-grid');
 }
 
+// >>> FIN DU BLOC 8 — colle ensuite le bloc 9 juste en dessous <<<
 /* ============ AMBASSADEURS ============ */
 $('ambassador-form') && $('ambassador-form').addEventListener('submit', handleAmbassadorSubmit);
 
@@ -1706,6 +1810,7 @@ async function handleAmbassadorSubmit(evt) {
     lastname: ($('amb-lastname').value || '').trim(),
     email: ($('amb-email').value || '').trim(),
     phone: ($('amb-phone').value || '').trim(),
+    formation: ($('amb-formation').value || '').trim(),
     points: 0,
     log: []
   };
@@ -1817,19 +1922,19 @@ window.stopChallenge = async function () {
 
 function medalFor(rank) { return rank === 0 ? '🥇' : rank === 1 ? '🥈' : rank === 2 ? '🥉' : '#' + (rank + 1); }
 
-/* ---- Export / import Excel des ambassadeurs ---- */
+/* ---- Export / import Excel (avec la colonne Formation) ---- */
 window.exportAmbassadorsExcel = function () {
   if (state.ambassadors.length === 0) { alert('Aucun ambassadeur à exporter pour le moment.'); return; }
-  const headers = ['Prénom', 'Nom', 'Email', 'Téléphone', 'Points'];
+  const headers = ['Prénom', 'Nom', 'Email', 'Téléphone', 'Formation', 'Points'];
   const rows = [...state.ambassadors]
     .sort((a, b) => num(b.points) - num(a.points))
-    .map(a => [a.firstname || '', a.lastname || '', a.email || '', a.phone || '', num(a.points)]);
+    .map(a => [a.firstname || '', a.lastname || '', a.email || '', a.phone || '', a.formation || '', num(a.points)]);
   const stamp = toISO(todayDate());
 
   if (typeof XLSX !== 'undefined') {
     try {
       const ws = XLSX.utils.aoa_to_sheet([headers, ...rows]);
-      ws['!cols'] = [{ wch: 16 }, { wch: 18 }, { wch: 32 }, { wch: 16 }, { wch: 10 }];
+      ws['!cols'] = [{ wch: 16 }, { wch: 18 }, { wch: 32 }, { wch: 16 }, { wch: 22 }, { wch: 10 }];
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, ws, 'Ambassadeurs');
       XLSX.writeFile(wb, `edo-ambassadeurs-${stamp}.xlsx`);
@@ -1854,6 +1959,7 @@ const AMB_ALIASES = {
   lastname:  ['nom', 'lastname', 'last', 'surname', 'familyname', 'nomdefamille'],
   email:     ['email', 'mail', 'courriel', 'emailaddress', 'adressemail', 'adresseemail'],
   phone:     ['telephone', 'tel', 'phone', 'mobile', 'portable', 'gsm', 'numero'],
+  formation: ['formation', 'filiere', 'cursus', 'parcours', 'classe'],
   points:    ['points', 'point', 'pts', 'score']
 };
 function normalizeHeader(h) {
@@ -1913,7 +2019,7 @@ window.importAmbassadors = async function (evt) {
 
   try {
     const rows = await readSpreadsheetRows(file);
-    if (!rows.length) { alert("Aucune ligne exploitable : vérifie que la 1re ligne contient les en-têtes (Prénom, Nom, Email, Téléphone, Points)."); return; }
+    if (!rows.length) { alert("Aucune ligne exploitable : vérifie que la 1re ligne contient les en-têtes (Prénom, Nom, Email, Téléphone, Formation, Points)."); return; }
 
     const nameKey = (f, l) => `${f}|${l}`.toLowerCase().trim();
     const emails = new Set(state.ambassadors.map(a => String(a.email || '').trim().toLowerCase()).filter(Boolean));
@@ -1926,6 +2032,7 @@ window.importAmbassadors = async function (evt) {
       const lastname = pickField(row, AMB_ALIASES.lastname);
       const email = pickField(row, AMB_ALIASES.email);
       const phone = pickField(row, AMB_ALIASES.phone);
+      const formation = pickField(row, AMB_ALIASES.formation);
       const pointsRaw = pickField(row, AMB_ALIASES.points).replace(',', '.').replace(/\s/g, '');
       if (!firstname && !lastname) { invalid++; return; }
 
@@ -1936,7 +2043,7 @@ window.importAmbassadors = async function (evt) {
       names.add(nKey);
 
       const points = Math.max(0, Math.round(Number(pointsRaw) || 0));
-      toCreate.push({ firstname, lastname, email, phone, points });
+      toCreate.push({ firstname, lastname, email, phone, formation, points });
     });
 
     if (!toCreate.length) {
@@ -1966,7 +2073,7 @@ window.renderAmbassadors = function () {
   const search = (searchInput ? searchInput.value : '').trim().toLowerCase();
 
   const sorted = [...state.ambassadors].sort((a, b) => num(b.points) - num(a.points));
-  const filtered = search ? sorted.filter(a => `${a.firstname || ''} ${a.lastname || ''}`.toLowerCase().includes(search)) : sorted;
+  const filtered = search ? sorted.filter(a => `${a.firstname || ''} ${a.lastname || ''} ${a.formation || ''}`.toLowerCase().includes(search)) : sorted;
 
   if (state.ambassadors.length === 0) { list.innerHTML = ''; empty.classList.remove('hidden'); return; }
   empty.classList.add('hidden');
@@ -1986,7 +2093,7 @@ window.renderAmbassadors = function () {
       <span class="font-heading font-black text-xl w-10 text-center shrink-0">${medalFor(rank)}</span>
       <div class="w-10 h-10 rounded bg-current/10 flex items-center justify-center font-heading font-bold text-xs shrink-0 border" style="border-color:var(--table-border)">${escapeHtml(((a.firstname || '?')[0] || '') + ((a.lastname || '')[0] || ''))}</div>
       <div class="min-w-0 flex-1">
-        <p class="text-sm font-semibold truncate">${escapeHtml(a.firstname || '')} ${escapeHtml(a.lastname || '')} <span class="chip" title="${nextTxt}">${tier.icon} ${tier.name}</span></p>
+        <p class="text-sm font-semibold truncate">${escapeHtml(a.firstname || '')} ${escapeHtml(a.lastname || '')} <span class="chip" title="${nextTxt}">${tier.icon} ${tier.name}</span>${a.formation ? ` <span class="chip">🎓 ${escapeHtml(a.formation)}</span>` : ''}</p>
         <p class="text-[11px] opacity-40 font-mono truncate">${escapeHtml(a.email || '')}${a.phone ? ' · ' + escapeHtml(a.phone) : ''}</p>
         <p class="text-[10px] opacity-35 mt-0.5">${nextTxt}</p>
       </div>
@@ -2006,6 +2113,7 @@ window.renderAmbassadors = function () {
   }).join('');
 };
 
+// >>> FIN DU BLOC 9 — colle ensuite le bloc 10 juste en dessous <<<
 /* ============ QUÊTES (KANBAN) ============ */
 document.getElementById('task-form') && document.getElementById('task-form').addEventListener('submit', handleTaskSubmit);
 
@@ -2062,7 +2170,9 @@ function taskCardHtml(t, col) {
   const selected = state.selectedTasks.has(t.id);
   const cl = Array.isArray(t.checklist) ? t.checklist : [];
   const clDone = cl.filter(c => c.done).length;
+  const link = safeUrl(t.link);
   const meta = [
+    link ? `<a href="${escapeHtml(link)}" target="_blank" rel="noopener" onclick="event.stopPropagation()" class="chip chip-ok" title="Ouvrir le lien / fichier">🔗 Fichier</a>` : '',
     cl.length ? `<span class="chip ${clDone === cl.length ? 'chip-ok' : ''}" title="Checklist">☑ ${clDone}/${cl.length}</span>` : '',
     (t.recurrence && t.recurrence !== 'none') ? `<span class="chip" title="${escapeHtml(RECURRENCES[t.recurrence] || '')}">🔁 ${escapeHtml(RECURRENCES[t.recurrence] || '')}</span>` : ''
   ].join('');
@@ -2091,7 +2201,7 @@ function columnHtml(col, idx, total, count, cardsHtml) {
     <div class="hud-kanban-head">
       <div class="flex items-center gap-2 min-w-0">
         <p class="truncate">${escapeHtml(col.name)}</p>
-        ${col.done ? '<span class="col-done-tag" title="Colonne terminée : les deadlines n\'y alertent plus">✓</span>' : ''}
+        ${col.done ? '<span class="col-done-tag" title="Colonne terminée : les deadlines n\'y alertent plus, et la valider rapporte XP + pièces">✓</span>' : ''}
         <span class="hud-kanban-count">${count}</span>
       </div>
       <details class="col-menu">
@@ -2167,6 +2277,7 @@ function renderKanban() {
   }).join('');
 
   updateBulkBar();
+  renderEditoStrip();
 }
 
 /* ---- Création / suppression d'étiquettes ---- */
@@ -2179,8 +2290,9 @@ async function handleTaskSubmit(evt) {
   const deadline = $('t-deadline').value || '';
   const recurrence = $('t-recurrence').value || 'none';
   const status = $('t-status').value || getColumns()[0].id;
+  const link = safeUrl($('t-link').value);
   try {
-    await addDoc(tasksCol(), { title, assignee, deadline, recurrence, checklist: [], description: '', status, createdAt: serverTimestamp() });
+    await addDoc(tasksCol(), { title, assignee, deadline, recurrence, link, checklist: [], description: '', status, createdAt: serverTimestamp() });
     evt.target.reset();
     $('t-status').value = status;
     $('t-assignee').dataset.who = '';
@@ -2241,6 +2353,7 @@ window.deleteSelectedTasks = async function () {
   } catch (e) { reportFirestoreError('edo_tasks', e); alert(explainError(e, 'Impossible de supprimer la sélection pour le moment.')); }
 };
 
+/* ---- Tâches récurrentes ---- */
 function nextRecurringDate(t) {
   const step = (d) => {
     const n = new Date(d);
@@ -2258,28 +2371,33 @@ function nextRecurringDate(t) {
 async function spawnRecurring(t) {
   await addDoc(tasksCol(), {
     title: t.title || 'Sans titre', description: t.description || '', assignee: normalizeAssignee(t.assignee),
-    deadline: nextRecurringDate(t), recurrence: t.recurrence,
+    deadline: nextRecurringDate(t), recurrence: t.recurrence, link: safeUrl(t.link),
     checklist: (Array.isArray(t.checklist) ? t.checklist : []).map(c => ({ ...c, done: false })),
     status: getColumns()[0].id, createdAt: serverTimestamp()
   });
   toast(`Nouvelle occurrence créée : ${escapeHtml(t.title || '')}`, '🔁');
 }
 
+/* ---- Déplacement (XP + pièces la 1re fois qu'une étiquette est terminée) ---- */
 async function moveTasksToColumn(ids, colId) {
   const col = columnById(colId);
   const toMove = ids.map(id => state.tasks.find(x => x.id === id)).filter(t => t && taskColumnId(t) !== colId);
   if (!toMove.length) return;
-  const spawnList = [];
+  const spawnList = [], rewarded = [];
   try {
     await runInBatches(toMove.map(t => (batch) => {
       const upd = { status: colId };
-      if (col && col.done && t.recurrence && t.recurrence !== 'none' && !t.recurrenceSpawned) { upd.recurrenceSpawned = true; spawnList.push(t); }
+      if (col && col.done) {
+        if (!t.rewarded) { upd.rewarded = true; rewarded.push(t.id); }
+        if (t.recurrence && t.recurrence !== 'none' && !t.recurrenceSpawned) { upd.recurrenceSpawned = true; spawnList.push(t); }
+      }
       batch.update(doc(db, 'edo_tasks', t.id), upd);
     }));
     for (const t of spawnList) await spawnRecurring(t);
-    if (col && col.done) {
-      toast(toMove.length > 1 ? `${toMove.length} quêtes validées !` : 'Quête validée !', '🏆');
-      bumpCounter('tasksDone', toMove.length);
+    if (rewarded.length) {
+      const xp = 10 * rewarded.length;
+      awardXp(xp, { tasksDone: rewarded.length });
+      toast(`+${xp} XP · +${coinsFor(xp)} 🪙 — quête validée !`, '🏆');
     }
     logActivity('Étiquettes déplacées', `${toMove.length} → ${col ? col.name : colId}`);
   } catch (e) { reportFirestoreError('edo_tasks', e); alert(explainError(e, 'Impossible de déplacer cette étiquette pour le moment.')); }
@@ -2292,6 +2410,7 @@ window.moveSelectedTasks = async function (colId) {
   if (sel) sel.value = '';
 };
 
+// >>> FIN DU BLOC 10 — colle ensuite le bloc 11 juste en dessous <<<
 /* ---- Glisser-déposer (poignée ⠿) ---- */
 window.handleTaskDragStart = function (evt, id) {
   state.draggedTaskId = id;
@@ -2353,6 +2472,7 @@ window.openTaskModal = function (id) {
   const who = normalizeAssignee(t.assignee);
   $('tm-title').value = t.title || '';
   $('tm-desc').value = t.description || '';
+  $('tm-link').value = t.link || '';
   $('tm-deadline').value = t.deadline || '';
   const whoSel = $('tm-assignee');
   whoSel.value = who; whoSel.dataset.who = who;
@@ -2384,6 +2504,7 @@ window.handleTaskModalSubmit = async function (evt) {
   const payload = {
     title,
     description: ($('tm-desc').value || '').trim(),
+    link: safeUrl($('tm-link').value),
     deadline: $('tm-deadline').value || '',
     assignee: normalizeAssignee($('tm-assignee').value),
     status: newStatus,
@@ -2391,12 +2512,14 @@ window.handleTaskModalSubmit = async function (evt) {
     checklist: state.modalChecklist.map(c => ({ ...c }))
   };
   const movingToDone = !!(newCol && newCol.done && !(prevCol && prevCol.done));
+  const reward = movingToDone && !t.rewarded;
   const spawn = movingToDone && recurrence !== 'none' && !t.recurrenceSpawned;
+  if (reward) payload.rewarded = true;
   if (spawn) payload.recurrenceSpawned = true;
   try {
     await updateDoc(doc(db, 'edo_tasks', id), payload);
     if (spawn) await spawnRecurring({ ...t, ...payload });
-    if (movingToDone) bumpCounter('tasksDone');
+    if (reward) { awardXp(10, { tasksDone: 1 }); toast(`+10 XP · +${coinsFor(10)} 🪙 — quête validée !`, '🏆'); }
     closeTaskModal();
     toast('Étiquette mise à jour', '✏️');
     logActivity('Étiquette modifiée', title);
@@ -2483,7 +2606,8 @@ function computeReminders() {
   const items = [];
   const today = toISO(todayDate());
 
-  state.editorial.filter(e => !e.done && e.date && e.date <= today).forEach(e => {
+  // Posts planifiés non publiés dont la date est passée (les « programmés » partent seuls à l'heure)
+  state.editorial.filter(e => editoStatus(e) === 'todo' && e.date && e.date <= today).forEach(e => {
     const late = e.date < today;
     items.push({ icon: '📅', level: late ? 'late' : 'today', tab: 'edito',
       text: `${late ? 'En retard' : "À publier aujourd'hui"} : ${e.subject || 'Sans sujet'} (${platformConfig(e.platform).label})` });
@@ -2497,7 +2621,7 @@ function computeReminders() {
     items.push({ icon: diff < 0 ? '⚠️' : '⏰', level: diff < 0 ? 'late' : 'soon', tab: 'taches', text: `${t.title || 'Sans titre'} — ${when}` });
   });
 
-  state.posts.filter(p => p.statsPending && p.date && daysBetween(p.date, today) >= 3).forEach(p => {
+  state.posts.filter(p => p.statsPending && p.date && daysBetween(p.date, today) >= 0).forEach(p => {
     items.push({ icon: '📊', level: 'soon', tab: 'dashboard', text: `Stats à saisir : ${p.title || 'Sans titre'} (publié le ${p.date})` });
   });
 
@@ -2562,6 +2686,7 @@ function renderFollowersChart() {
   } catch (e) { console.error('Erreur graphique abonnés :', e); }
 }
 
+// >>> FIN DU BLOC 11 — colle ensuite le bloc 12 juste en dessous <<<
 /* ============ ANALYSES (format / jour / créneau) ============ */
 function weightedStats(list) {
   const views = list.reduce((s, p) => s + num(p.views), 0);
@@ -2616,7 +2741,7 @@ function buildMonthlyReport(monthId) {
     boss: bossDoc ? bossStats(monthId, bossDoc) : null,
     edito: state.editorial.filter(e => e.date && e.date >= r.start && e.date <= r.end),
     ambs: [...state.ambassadors].sort((a, b) => num(b.points) - num(a.points)).slice(0, 10)
-      .map(a => ({ name: `${a.firstname || ''} ${a.lastname || ''}`.trim(), points: num(a.points), gained: pointsGainedInMonth(a, monthId) }))
+      .map(a => ({ name: `${a.firstname || ''} ${a.lastname || ''}`.trim(), formation: a.formation || '', points: num(a.points), gained: pointsGainedInMonth(a, monthId) }))
   };
 }
 function reportMonthValue() { const v = $('report-month') ? $('report-month').value : ''; return /^\d{4}-\d{2}$/.test(v) ? v : currentMonthId(); }
@@ -2645,10 +2770,10 @@ window.exportMonthlyReportExcel = function () {
     ...rep.top.map((p, i) => [i + 1, p.title || '', platformConfig(p.platform).label, Number(engagementRate(p).toFixed(2)), num(p.views)])
   ]), 'Top 3');
   XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([
-    ['Ambassadeur', 'Points (total)', 'Points gagnés ce mois'], ...rep.ambs.map(a => [a.name, a.points, a.gained])
+    ['Ambassadeur', 'Formation', 'Points (total)', 'Points gagnés ce mois'], ...rep.ambs.map(a => [a.name, a.formation, a.points, a.gained])
   ]), 'Ambassadeurs');
   XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([
-    ['Date', 'Plateforme', 'Sujet', 'Fait'], ...rep.edito.map(e => [e.date, platformConfig(e.platform).label, e.subject || '', e.done ? 'Oui' : 'Non'])
+    ['Date', 'Plateforme', 'Sujet', 'Statut'], ...rep.edito.map(e => [e.date, platformConfig(e.platform).label, e.subject || '', EDITO_STATUS[editoStatus(e)].label])
   ]), 'Édito');
   XLSX.writeFile(wb, `edo-rapport-${rep.monthId}.xlsx`);
   toast('Rapport Excel téléchargé', '📄');
@@ -2674,7 +2799,7 @@ function reportHtml(rep) {
     ${rep.boss ? `<h2>Boss du mois</h2><p>Objectif ${formatNumber(rep.boss.target)} vues — obtenu ${formatNumber(rep.boss.total)} (${Math.round(rep.boss.pct)} %) ${rep.boss.total >= rep.boss.target ? '— <b>Boss vaincu 🏆</b>' : ''}</p>` : ''}
     <h2>Top 3 (engagement)</h2><table>${head(['#', 'Titre', 'Plateforme', 'Engagement', 'Vues'])}${rep.top.map((p, i) => row([i + 1, p.title || '', platformConfig(p.platform).label, engagementRate(p).toFixed(1) + ' %', formatNumber(p.views)])).join('')}</table>
     <h2>Publications du mois</h2><table>${head(['Date', 'Plateforme', 'Titre', 'Format', 'Vues', 'Engagement'])}${rep.posts.map(p => row([p.date, platformConfig(p.platform).label, p.title || '', p.format || '', formatNumber(p.views), engagementRate(p).toFixed(1) + ' %'])).join('')}</table>
-    <h2>Ambassadeurs</h2><table>${head(['Ambassadeur', 'Points', 'Gagnés ce mois'])}${rep.ambs.map(a => row([a.name, a.points, a.gained])).join('')}</table>
+    <h2>Ambassadeurs</h2><table>${head(['Ambassadeur', 'Formation', 'Points', 'Gagnés ce mois'])}${rep.ambs.map(a => row([a.name, a.formation, a.points, a.gained])).join('')}</table>
   </body></html>`;
 }
 window.printMonthlyReport = function () {
@@ -2697,11 +2822,12 @@ async function handleMediaSubmit(evt) {
   if (!isConfigured || !db) { alert("Configure Firebase avant d'ajouter un média."); return; }
   const payload = {
     title: ($('md-title').value || '').trim(),
-    url: ($('md-url').value || '').trim(),
+    url: safeUrl($('md-url').value),
     type: $('md-type').value || 'photo',
     tags: parseTags($('md-tags').value),
     by: state.profile.pseudo || ''
   };
+  if (!payload.url) { alert('Le lien doit commencer par http:// ou https://'); return; }
   try {
     await addDoc(mediaCol(), { ...payload, createdAt: serverTimestamp() });
     evt.target.reset();
@@ -2743,7 +2869,7 @@ function renderMedia() {
           <p class="text-sm font-semibold break-words">${t.icon} ${escapeHtml(m.title || 'Sans titre')}</p>
           <button type="button" onclick="deleteMedia('${m.id}')" class="opacity-30 hover:opacity-70 text-xs shrink-0" title="Retirer">✕</button>
         </div>
-        <a href="${escapeHtml(m.url)}" target="_blank" rel="noopener" class="text-xs font-mono text-edo-orange hover:underline truncate">${escapeHtml(host)} ↗</a>
+        <a href="${escapeHtml(safeUrl(m.url))}" target="_blank" rel="noopener" class="text-xs font-mono text-edo-orange hover:underline truncate">${escapeHtml(host)} ↗</a>
         ${tags ? `<div class="flex flex-wrap gap-1">${tags}</div>` : ''}
         <p class="text-[11px] opacity-35 font-mono">${t.label}${m.by ? ' · ' + escapeHtml(m.by) : ''}</p>
       </div>`;
@@ -2758,7 +2884,7 @@ async function handleCompSubmit(evt) {
   const payload = {
     name: ($('cp-name').value || '').trim(),
     platform: $('cp-platform').value || 'instagram',
-    url: ($('cp-url').value || '').trim(),
+    url: safeUrl($('cp-url').value),
     followers: Math.max(0, Math.round(Number($('cp-followers').value) || 0)),
     postsPerWeek: Math.max(0, Number($('cp-ppw').value) || 0),
     notes: ($('cp-notes').value || '').trim().slice(0, 200)
@@ -2811,7 +2937,7 @@ function renderCompetitors() {
   }).join('');
   const rows = [...state.competitors].sort((a, b) => num(b.followers) - num(a.followers)).map(c => `
     <tr>
-      <td class="font-semibold">${c.url ? `<a href="${escapeHtml(c.url)}" target="_blank" rel="noopener" class="hover:underline">${escapeHtml(c.name || '—')} ↗</a>` : escapeHtml(c.name || '—')}</td>
+      <td class="font-semibold">${safeUrl(c.url) ? `<a href="${escapeHtml(safeUrl(c.url))}" target="_blank" rel="noopener" class="hover:underline">${escapeHtml(c.name || '—')} ↗</a>` : escapeHtml(c.name || '—')}</td>
       <td>${platformBadge(c.platform)}</td>
       <td class="font-mono">${formatNumber(c.followers)}</td>
       <td class="font-mono">${num(c.postsPerWeek)}</td>
@@ -2824,7 +2950,8 @@ function renderCompetitors() {
   body.innerHTML = own + rows;
 }
 
-/* ============ ÉQUIPE : CLASSEMENT D'XP + SUCCÈS ============ */
+// >>> FIN DU BLOC 12 — colle ensuite le bloc 13 juste en dessous <<<
+/* ============ SUCCÈS : calcul + déblocage ============ */
 function computeStreak() {
   const dates = new Set(state.posts.map(p => p.date).filter(Boolean));
   let streak = 0, cursor = todayDate();
@@ -2832,28 +2959,40 @@ function computeStreak() {
   return streak;
 }
 function achievementContext() {
-  const p = { postsAdded: 0, questsDone: 0, tasksDone: 0, ambRecruited: 0, planned: 0, ideasAdded: 0, ...state.profile };
+  const p = { postsAdded: 0, questsDone: 0, tasksDone: 0, ambRecruited: 0, planned: 0, ideasAdded: 0, coinsEarned: 0, chatCount: 0, spellsCast: 0, bought: 0, xp: 0, ...state.profile };
   const r = monthRange(currentMonthId());
   return {
     p,
+    level: getLevelInfo(p.xp).level,
     streak: computeStreak(),
     monthPosts: state.posts.filter(x => x.date && x.date >= r.start && x.date <= r.end).length,
-    bossWins: (Array.isArray(state.profile.claimed) ? state.profile.claimed : []).filter(k => String(k).endsWith(':100')).length
+    bossWins: (Array.isArray(p.claimed) ? p.claimed : []).filter(k => String(k).endsWith(':100')).length
   };
 }
+// Débloque d'un coup tous les succès atteints : XP + pièces + titres
 function checkAchievements() {
-  if (!state.profileLoaded || !currentUser || !db) return;
-  const ctx = achievementContext();
-  const unlocked = state.profile.achievements || {};
-  ACHIEVEMENTS.forEach(a => {
-    const key = 'ach:' + a.id;
-    if (unlocked[a.id] || state.claiming.has(key) || a.value(ctx) < a.goal) return;
-    state.claiming.add(key);
-    updateDoc(userDoc(), { [`achievements.${a.id}`]: toISO(todayDate()), xp: increment(a.xp) })
-      .then(() => { toast(`Succès débloqué : ${a.name} (+${a.xp} XP)`, a.icon); pulseXpBar(); })
-      .catch(e => reportFirestoreError('edo_users', e));
-  });
+  if (!state.profileLoaded || !currentUser || !db || state.claiming.has('ach')) return;
+  const ctx = achievementContext(), got = state.profile.achievements || {};
+  const fresh = ACHIEVEMENTS.filter(a => !got[a.id] && a.value(ctx) >= a.goal);
+  if (!fresh.length) return;
+  state.claiming.add('ach');
+  const day = toISO(todayDate());
+  const xp = fresh.reduce((s, a) => s + a.xp, 0);
+  const titles = fresh.map(a => a.title).filter(Boolean);
+  const upd = { ...xpGain(xp) };
+  fresh.forEach(a => { upd[`achievements.${a.id}`] = day; });
+  if (titles.length) upd.titles = arrayUnion(...titles);
+  updateDoc(userDoc(), upd)
+    .then(() => {
+      toast(fresh.length > 1 ? `${fresh.length} succès débloqués ! +${xp} XP · +${coinsFor(xp)} 🪙` : `Succès : ${fresh[0].name} (+${xp} XP · +${coinsFor(xp)} 🪙)`, fresh[0].icon);
+      if (titles.length) toast(`Nouveau titre : ${escapeHtml(titles[titles.length - 1])}`, '🏷️');
+      pulseXpBar();
+    })
+    .catch(e => reportFirestoreError('edo_users', e))
+    .finally(() => state.claiming.delete('ach'));
 }
+
+/* ============ ÉQUIPE : CLASSEMENT D'XP + SUCCÈS ============ */
 function renderTeam() {
   const body = $('team-body');
   const grid = $('ach-grid');
@@ -2863,9 +3002,10 @@ function renderTeam() {
     ? users.map((u, i) => {
         const info = getLevelInfo(num(u.xp));
         const me = currentUser && u.id === currentUser.uid;
-        return `<tr class="${me ? 'team-me' : ''}"><td class="font-heading font-black">${medalFor(i)}</td>
-          <td class="font-semibold">${escapeHtml(u.pseudo || 'Joueur')}${me ? ' <span class="chip">toi</span>' : ''}</td>
-          <td class="text-xs opacity-70">${escapeHtml(info.title)}</td>
+        const cls = CLASSES.find(c => c.id === u.class);
+        return `<tr class="${me ? 'team-me' : ''}" style="cursor:pointer" onclick="openProfile('${u.id}')"><td class="font-heading font-black">${medalFor(i)}</td>
+          <td class="font-semibold"><span class="inline-flex items-center gap-2">${avatarHtml(u, 26)}${escapeHtml(u.pseudo || 'Joueur')}${cls ? ' ' + cls.icon : ''}${me ? ' <span class="chip">toi</span>' : ''}</span></td>
+          <td class="text-xs opacity-70">${escapeHtml(displayTitle(u))}</td>
           <td class="font-mono">Niv. ${info.level}</td>
           <td class="font-mono font-bold text-edo-orange">${formatNumber(num(u.xp))} XP</td></tr>`;
       }).join('')
@@ -2880,16 +3020,15 @@ function renderTeam() {
     return `<div class="ach-card ${got ? 'is-unlocked' : ''}">
       <div class="ach-icon">${a.icon}</div>
       <div class="min-w-0">
-        <p class="text-sm font-semibold">${escapeHtml(a.name)}</p>
+        <p class="text-sm font-semibold">${escapeHtml(a.name)}${a.title ? ` <span class="chip" title="Titre débloqué">🏷️ ${escapeHtml(a.title)}</span>` : ''}</p>
         <p class="text-[11px] opacity-50">${escapeHtml(a.desc)}</p>
-        <p class="text-[10px] font-mono mt-1 ${got ? 'text-emerald-500' : 'opacity-50'}">${got ? `✔ débloqué le ${escapeHtml(String(unlocked[a.id]))} · +${a.xp} XP` : `${v}/${a.goal} · +${a.xp} XP`}</p>
+        <p class="text-[10px] font-mono mt-1 ${got ? 'text-emerald-500' : 'opacity-50'}">${got ? `✔ débloqué le ${escapeHtml(String(unlocked[a.id]))} · +${a.xp} XP` : `${v}/${a.goal} · +${a.xp} XP · +${coinsFor(a.xp)} 🪙`}</p>
       </div></div>`;
   }).join('');
 }
 
 /* ============ RÔLES, JOURNAL D'ACTIVITÉ, SAUVEGARDE ============ */
 // Sans champ "role" dans edo_users/{ton uid}, tout le monde est admin (aucun blocage).
-// Pour restreindre un compte : mets role = "member" dans la console Firebase.
 function isAdmin() { const r = state.profile && state.profile.role; return !r || r === 'admin'; }
 function requireAdmin(what) {
   if (isAdmin()) return true;
@@ -2937,7 +3076,7 @@ window.downloadBackup = function () {
     app: 'EDO//COMMAND', exportedAt: new Date().toISOString(),
     collections: {
       social_posts: state.posts, edo_editorial: state.editorial, swipe_file: state.swipes, edo_ambassadors: state.ambassadors,
-      edo_tasks: state.tasks, edo_bosses: state.bosses, edo_media: state.media, edo_competitors: state.competitors, edo_users: state.users
+      edo_tasks: state.tasks, edo_bosses: state.bosses, edo_media: state.media, edo_competitors: state.competitors, edo_users: state.users, edo_chat: state.chat
     },
     settings: { counters: state.followers, followersHistory: state.followersHistory, taskBoard: state.columns, rewards: state.rewards, ambassadorChallenge: state.challenge }
   };
@@ -2959,6 +3098,157 @@ window.copyHex = function (hex) {
   else done();
 };
 
+/* ============ TITRES, AVATAR, BOUTIQUE ============ */
+function ownedTitles(u) {
+  const lvl = getLevelInfo(num(u.xp)).level;
+  return [...new Set([
+    ...LEVELS.filter(l => l.level <= lvl).map(l => l.title),
+    ...(u.titles || []),
+    ...(u.owned || []).filter(x => ITEM[x] && ITEM[x].cat === 'title').map(x => ITEM[x].label)
+  ])];
+}
+function displayTitle(u) { return u.title || getLevelInfo(num(u.xp)).title; }
+function isEquipped(p, i) {
+  return i.cat === 'frame' ? p.frame === i.id : i.cat === 'logo' ? p.logo === i.id : i.cat === 'gear' ? (p.equip || {})[i.slot] === i.id : p.title === i.label;
+}
+function avatarHtml(u, size = 56) {
+  const logo = u.logo && ITEM[u.logo] ? ITEM[u.logo].icon : escapeHtml(((u.pseudo || '?')[0] || '?').toUpperCase());
+  return `<div class="avatar ${u.frame || ''}" style="width:${size}px;height:${size}px;font-size:${Math.round(size * .5)}px">${logo}</div>`;
+}
+const saveProfile = (upd) => updateDoc(userDoc(), upd).catch(e => reportFirestoreError('edo_users', e));
+
+window.setShopCat = (c) => { shopCat = c; renderShop(); };
+window.buyItem = async (id) => {
+  const i = ITEM[id], p = state.profile;
+  if (!i || num(p.coins) < i.price || getLevelInfo(num(p.xp)).level < i.lvl || (p.owned || []).includes(id)) return;
+  await saveProfile({ coins: increment(-i.price), owned: arrayUnion(id), bought: increment(1) });
+  toast(`${i.label} acheté !`, '🛍️');
+};
+window.equipItem = (id) => {
+  const i = ITEM[id], p = state.profile, on = isEquipped(p, i);
+  saveProfile(i.cat === 'frame' ? { frame: on ? '' : id } : i.cat === 'logo' ? { logo: on ? '' : id }
+    : i.cat === 'gear' ? { [`equip.${i.slot}`]: on ? '' : id } : { title: on ? '' : i.label });
+};
+window.setTitle = (t) => { saveProfile({ title: t }); toast('Titre équipé : ' + t, '🏷️'); };
+window.renamePseudo = () => {
+  const v = (prompt('Nouveau pseudo :', state.profile.pseudo || '') || '').trim().slice(0, 24);
+  if (v) saveProfile({ pseudo: v });
+};
+window.chooseClass = async (id) => {
+  const p = state.profile, cost = p.class ? 100 : 0;
+  if (getLevelInfo(num(p.xp)).level < 2) return alert('Les classes se débloquent au niveau 2.');
+  if (p.class === id) return;
+  if (cost) { if (num(p.coins) < cost) return alert('Il te faut 100 🪙 pour changer de classe.'); if (!confirm('Changer de classe pour 100 🪙 ?')) return; }
+  await saveProfile({ class: id, ...(cost ? { coins: increment(-cost) } : {}) });
+  toast('Nouvelle classe : ' + CLASSES.find(c => c.id === id).name, '⚔️');
+};
+
+function renderShop() {
+  const box = $('shop-box');
+  if (!box) return;
+  const p = state.profile, lvl = getLevelInfo(num(p.xp)).level, owned = new Set(p.owned || []);
+  box.innerHTML = `<p class="font-heading font-bold text-2xl">Boutique</p>
+    <p class="text-sm opacity-60 mt-1">Ta bourse : <b class="text-edo-orange">🪙 ${formatNumber(num(p.coins))}</b> · niveau ${lvl}</p>
+    <div class="flex flex-wrap gap-2 mt-4">${Object.entries(CAT_LABEL).map(([k, l]) => `<button class="filter-chip ${k === shopCat ? 'is-active' : ''}" onclick="setShopCat('${k}')">${l}</button>`).join('')}</div>
+    <div class="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-3 mt-4">${SHOP.filter(i => i.cat === shopCat).map(i => {
+      const has = owned.has(i.id), on = has && isEquipped(p, i);
+      const btn = has ? `<button class="hud-btn-${on ? 'ghost' : 'primary'} py-2 text-xs w-full" onclick="equipItem('${i.id}')">${on ? 'Retirer' : 'Équiper'}</button>`
+        : lvl < i.lvl ? `<button class="hud-btn-ghost py-2 text-xs w-full" disabled>🔒 Niv. ${i.lvl}</button>`
+        : `<button class="hud-btn-primary py-2 text-xs w-full" onclick="buyItem('${i.id}')" ${num(p.coins) < i.price ? 'disabled' : ''}>🪙 ${i.price}</button>`;
+      const preview = i.cat === 'frame' ? `<div class="avatar ${i.id}" style="width:56px;height:56px;font-size:28px">🙂</div>` : `<span class="text-4xl">${i.icon}</span>`;
+      return `<div class="hud-panel p-3 text-center space-y-2"><div class="flex justify-center">${preview}</div><p class="text-xs font-semibold break-words">${escapeHtml(i.label)}</p>${btn}</div>`;
+    }).join('')}</div>`;
+}
+
+// >>> FIN DU BLOC 13 — colle ensuite le bloc 14 (dernier) juste en dessous <<<
+/* ============ PAGE PROFIL (soi-même ou un coéquipier) ============ */
+window.openProfile = function (uid) { state.viewUid = uid || (currentUser && currentUser.uid); switchTab('profil'); };
+
+function renderProfilePage() {
+  const box = $('profil-box');
+  if (!box || state.activeTab !== 'profil') return;
+  const uid = state.viewUid || (currentUser && currentUser.uid);
+  const me = !!currentUser && uid === currentUser.uid;
+  const u = me ? state.profile : state.users.find(x => x.id === uid);
+  if (!u) { box.innerHTML = '<p class="opacity-50">Profil introuvable.</p>'; return; }
+  const info = getLevelInfo(num(u.xp)), cls = CLASSES.find(c => c.id === u.class), eq = u.equip || {}, got = u.achievements || {};
+  const stats = [['Posts', u.postsAdded], ['Quêtes', u.questsDone], ['Étiquettes', u.tasksDone], ['Ambassadeurs', u.ambRecruited],
+                 ['Messages', u.chatCount], ['Sorts', u.spellsCast], ['Achats', u.bought], ['Pièces gagnées', u.coinsEarned]];
+  const mine = me ? `
+    <p class="font-heading font-semibold text-lg mt-6">Classe</p>
+    <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3 mt-2">${CLASSES.map(c => `<button type="button" class="hud-panel p-3 text-left ${u.class === c.id ? 'amb-rank-1' : ''}" onclick="chooseClass('${c.id}')"><p class="font-semibold text-sm">${c.icon} ${c.name}</p><p class="text-[11px] opacity-50">${c.desc}</p></button>`).join('')}</div>
+    <p class="text-[11px] opacity-40 mt-1">Niveau 2 requis · 1re classe gratuite, changement : 100 🪙.</p>
+    <p class="font-heading font-semibold text-lg mt-6">Titres (${ownedTitles(u).length})</p>
+    <div class="flex flex-wrap gap-2 mt-2">${ownedTitles(u).map(t => `<button type="button" class="filter-chip ${displayTitle(u) === t ? 'is-active' : ''}" data-t="${escapeHtml(t)}" onclick="setTitle(this.dataset.t)">${escapeHtml(t)}</button>`).join('')}</div>
+    <div class="flex gap-2 mt-4 flex-wrap"><button type="button" class="hud-btn-ghost px-4 py-2 text-xs" onclick="renamePseudo()">✎ Changer de pseudo</button><button type="button" class="hud-btn-primary px-4 py-2 text-xs" onclick="switchTab('boutique')">🛒 Boutique</button></div>` : '';
+  box.innerHTML = `
+    <div class="hud-panel p-5 flex flex-wrap items-center gap-5">
+      ${avatarHtml(u, 88)}
+      <div class="min-w-0 flex-1" style="min-width:200px">
+        <p class="font-heading font-black text-2xl truncate">${escapeHtml(u.pseudo || 'Joueur')}</p>
+        <p class="text-sm text-edo-orange font-mono">${cls ? cls.icon + ' ' + cls.name + ' · ' : ''}${escapeHtml(displayTitle(u))}</p>
+        <div class="xp-track-light mt-2"><div class="xp-fill-light" style="width:${info.pct}%"></div></div>
+        <p class="text-[11px] font-mono opacity-60 mt-1">Niveau ${info.level} · ${formatNumber(num(u.xp))} XP · 🪙 ${formatNumber(num(u.coins))} · 🏆 ${Object.keys(got).length}/${ACHIEVEMENTS.length}</p>
+      </div>
+      <div class="flex gap-2">${['head', 'weapon', 'armor', 'pet'].map(s => `<span class="gear-slot">${eq[s] && ITEM[eq[s]] ? ITEM[eq[s]].icon : '·'}</span>`).join('')}</div>
+    </div>
+    <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-4">${stats.map(([l, v]) => `<div class="hud-panel p-3"><p class="hud-kpi-label">${l}</p><p class="font-heading font-extrabold text-xl">${formatNumber(num(v))}</p></div>`).join('')}</div>
+    ${mine}
+    <p class="font-heading font-semibold text-lg mt-6">Succès débloqués</p>
+    <div class="flex flex-wrap gap-2 mt-2">${ACHIEVEMENTS.filter(a => got[a.id]).map(a => `<span class="chip" title="${escapeHtml(a.desc)}">${a.icon} ${escapeHtml(a.name)}</span>`).join('') || '<p class="text-xs opacity-40">Aucun pour le moment.</p>'}</div>`;
+}
+
+/* ============ SORTS (déblocage par niveau, recharge stockée dans le profil) ============ */
+function rain(list) {
+  for (let i = 0; i < 40; i++) {
+    const s = document.createElement('span');
+    s.className = 'rain'; s.textContent = list[i % list.length];
+    s.style.cssText = `left:${Math.random() * 100}vw;animation-delay:${Math.random()}s;font-size:${18 + Math.random() * 22}px`;
+    document.body.appendChild(s); setTimeout(() => s.remove(), 3200);
+  }
+}
+window.castSpell = async (id) => {
+  const s = SPELLS.find(x => x.id === id), p = state.profile;
+  if (!s || getLevelInfo(num(p.xp)).level < s.lvl) return;
+  if (Date.now() - num((p.spellAt || {})[id]) < s.cd * 60000) { toast('Sort en recharge…', '⏳'); return; }
+  s.run();
+  await saveProfile({ [`spellAt.${id}`]: Date.now(), spellsCast: increment(1), ...(s.xp ? xpGain(s.xp) : {}) });
+  if (s.xp) { toast(`+${s.xp} XP · +${coinsFor(s.xp)} 🪙`, s.icon); pulseXpBar(); }
+};
+function renderSpellBar() {
+  let el = $('spellbar');
+  if (!el) { el = document.createElement('div'); el.id = 'spellbar'; document.body.appendChild(el); }
+  const open = !!$('spell-panel') && !$('spell-panel').classList.contains('hidden');
+  const lvl = getLevelInfo(num(state.profile.xp)).level;
+  el.innerHTML = `<div id="spell-panel" class="${open ? '' : 'hidden '}hud-panel hud-modal p-2 space-y-1">${SPELLS.map(s => {
+    const lock = lvl < s.lvl, wait = Math.max(0, num((state.profile.spellAt || {})[s.id]) + s.cd * 60000 - Date.now());
+    const info = lock ? '🔒 niv. ' + s.lvl : wait ? '⏳ ' + (wait > 3.6e6 ? Math.ceil(wait / 3.6e6) + ' h' : Math.ceil(wait / 6e4) + ' min') : 'Prêt';
+    return `<button type="button" class="spell-btn" ${lock ? 'disabled' : ''} onclick="castSpell('${s.id}')"><span>${s.icon} ${s.name}</span><small>${info}</small></button>`;
+  }).join('')}</div><button type="button" class="spell-fab" title="Sorts" onclick="document.getElementById('spell-panel').classList.toggle('hidden')">🪄</button>`;
+}
+
+/* ============ CHAT INTERNE ============ */
+function renderChat() {
+  const el = $('chat-list');
+  if (!el) return;
+  const users = Object.fromEntries(state.users.map(u => [u.id, u]));
+  el.innerHTML = state.chat.length ? state.chat.map(m => {
+    const u = users[m.uid] || {}, mine = currentUser && m.uid === currentUser.uid;
+    const t = new Date(tsMs(m.at)).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+    return `<div class="chat-msg ${mine ? 'chat-me' : ''}"><button type="button" onclick="openProfile('${m.uid}')">${avatarHtml(u, 32)}</button>
+      <div class="min-w-0"><p class="text-[10px] font-mono opacity-50">${escapeHtml(u.pseudo || m.who || '?')} · ${t}</p><p class="text-sm break-words">${escapeHtml(m.text)}</p></div></div>`;
+  }).join('') : '<p class="text-xs opacity-40 text-center py-6">Aucun message. Lance la conversation !</p>';
+  el.scrollTop = el.scrollHeight;
+}
+$('chat-form') && $('chat-form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const input = $('chat-input'), text = input.value.trim().slice(0, 300);
+  if (!text || !db || !currentUser) return;
+  input.value = '';
+  try { await addDoc(chatCol(), { uid: currentUser.uid, who: state.profile.pseudo || '', text, at: serverTimestamp() }); bumpCounter('chatCount'); }
+  catch (err) { reportFirestoreError('edo_chat', err); }
+});
+
 /* ============ INIT ============ */
 function init() {
   const dateField = document.getElementById('f-date');
@@ -2976,6 +3266,7 @@ function init() {
   renderChallenge();
   renderRewardsForm();
   renderRole();
+  renderSpellBar();
 
   // Ferme menus / panneaux au clic extérieur, modales avec Échap
   document.addEventListener('click', (e) => {
