@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
 <title>EDO // COMMAND</title>
 <script>
-  // Applique le thème AVANT le premier rendu pour éviter le flash (FOUC).
+  // Applique le thème AVANT le premier rendu pour éviter le flash.
   (function () {
     try {
       var t = localStorage.getItem('edo-theme');
@@ -114,11 +114,11 @@
       <!-- PROFIL JOUEUR -->
       <div class="mx-4 mb-6 hud-panel hud-panel-xp px-4 py-4">
         <div class="flex items-center justify-between gap-2">
-          <div class="min-w-0 flex-1">
+          <div class="min-w-0 flex-1 cursor-pointer" onclick="openProfile()" title="Voir mon profil">
             <p id="profile-pseudo" class="font-heading font-bold text-sm text-white truncate">—</p>
             <p id="profile-title" class="text-[10px] text-edo-orange font-mono tracking-wide truncate">—</p>
           </div>
-          <button onclick="toggleProfilePanel()" title="Modifier mon profil" class="w-6 h-6 shrink-0 flex items-center justify-center rounded border border-white/15 hover:border-edo-orange/60 text-white/50 hover:text-edo-orange">
+          <button onclick="toggleProfilePanel()" title="Modifier mon pseudo" class="w-6 h-6 shrink-0 flex items-center justify-center rounded border border-white/15 hover:border-edo-orange/60 text-white/50 hover:text-edo-orange">
             <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 3a2.85 2.85 0 114 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>
           </button>
         </div>
@@ -128,6 +128,7 @@
         </div>
         <div class="xp-track h-1.5 overflow-hidden"><div id="xp-fill" class="xp-fill h-full" style="width:0%"></div></div>
         <p id="xp-caption" class="text-[9px] text-white/30 font-mono mt-1.5">0 / 100 XP</p>
+        <p id="coins-label" class="text-[11px] text-edo-yellow font-mono font-bold mt-1">🪙 0</p>
       </div>
 
       <div id="profile-panel" class="hidden mx-4 mb-4 hud-panel px-4 py-3.5 space-y-2.5">
@@ -170,6 +171,9 @@
         <button class="nav-btn" data-tab="outils" data-active="false" onclick="switchTab('outils')">
           <span class="nav-label"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z"/></svg>Outils &amp; journal</span>
         </button>
+        <button class="nav-btn" data-tab="profil" data-active="false" onclick="openProfile()"><span class="nav-label">🧙 Mon profil</span></button>
+        <button class="nav-btn" data-tab="boutique" data-active="false" onclick="switchTab('boutique')"><span class="nav-label">🛒 Boutique</span></button>
+        <button class="nav-btn" data-tab="chat" data-active="false" onclick="switchTab('chat')"><span class="nav-label">💬 Chat d'équipe</span></button>
       </nav>
     </div>
 
@@ -185,6 +189,7 @@
     </div>
   </aside>
 
+<!-- >>> FIN DU BLOC 1 — colle ensuite le bloc 2 juste en dessous <<< -->
   <!-- MAIN -->
   <main class="md:ml-72 min-h-screen pb-20 md:pb-0 relative z-10">
 
@@ -235,11 +240,13 @@
           </div>
           <div class="w-px h-6 bg-current/10 hidden sm:block"></div>
           <div class="flex items-center gap-2">
-            <a href="https://www.linkedin.com/company/88877449/admin/page-posts/published/" target="_blank" rel="noopener" title="LinkedIn" class="w-7 h-7 flex items-center justify-center rounded bg-black text-white hover:bg-edo-orange md:transition-colors">
+            <a href="https://www.linkedin.com/company/88877449/admin/dashboard/" target="_blank" rel="noopener" title="Dashboard LinkedIn" class="h-7 px-2 flex items-center gap-1.5 rounded bg-black text-white hover:bg-edo-orange md:transition-colors text-[10px] font-mono font-bold">
               <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M20.45 20.45h-3.55v-5.57c0-1.33-.02-3.03-1.85-3.03-1.85 0-2.14 1.45-2.14 2.94v5.66H9.36V9h3.41v1.56h.05c.47-.9 1.63-1.85 3.37-1.85 3.6 0 4.27 2.37 4.27 5.45v6.29zM5.34 7.43a2.06 2.06 0 110-4.12 2.06 2.06 0 010 4.12zM7.11 20.45H3.56V9h3.55v11.45z"/></svg>
+              <span class="hidden sm:inline">LINKEDIN</span>
             </a>
-            <a href="https://www.instagram.com/edo_campus" target="_blank" rel="noopener" title="Instagram" class="w-7 h-7 flex items-center justify-center rounded text-black hover:brightness-110 md:transition-all" style="background:linear-gradient(135deg,#FFA200,#FFC300)">
+            <a href="https://www.instagram.com/edo_campus/?next=%2F" target="_blank" rel="noopener" title="Instagram EDO Campus" class="h-7 px-2 flex items-center gap-1.5 rounded text-black hover:brightness-110 md:transition-all text-[10px] font-mono font-bold" style="background:linear-gradient(135deg,#FFA200,#FFC300)">
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#000" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.2" cy="6.8" r="1"/></svg>
+              <span class="hidden sm:inline">INSTAGRAM</span>
             </a>
             <div class="relative">
               <button id="reminder-btn" onclick="toggleReminders()" title="Rappels" class="relative w-7 h-7 flex items-center justify-center rounded border border-current/15 hover:border-edo-orange/60 hover:text-edo-orange md:transition-colors">
@@ -391,6 +398,7 @@
       </div>
     </section>
 
+<!-- >>> FIN DU BLOC 2 — colle ensuite le bloc 3 juste en dessous <<< -->
     <!-- VIEW: ARÈNE / OBJECTIFS -->
     <section id="view-arene" class="view" data-visible="false">
       <div class="w-full px-4 md:px-8 py-8 md:py-10 max-w-5xl">
@@ -485,13 +493,13 @@
             <p id="edito-cal-month-label" class="font-heading font-bold text-base"></p>
             <button onclick="shiftEditoMonth(1)" class="hud-btn-ghost w-9 h-9 !p-0 flex items-center justify-center"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg></button>
           </div>
-          <div class="flex items-center gap-4 mt-4 text-xs opacity-40 font-mono flex-wrap">
-            <span class="flex items-center gap-1.5"><span class="cal-dot bg-edo-orange"></span>INSTAGRAM</span>
-            <span class="flex items-center gap-1.5"><span class="cal-dot cal-dot-neutral"></span>LINKEDIN</span>
-            <span class="flex items-center gap-1.5"><span class="cal-dot cal-dot-outline"></span>À FAIRE</span>
-            <span class="flex items-center gap-1.5"><span class="cal-dot cal-dot-done"></span>FAIT</span>
+          <div class="flex items-center gap-4 mt-4 text-xs opacity-60 font-mono flex-wrap">
+            <span class="flex items-center gap-1.5"><span class="cal-dot" style="background:#9ca3af"></span>À FAIRE</span>
+            <span class="flex items-center gap-1.5"><span class="cal-dot bg-edo-orange"></span>PROGRAMMÉ</span>
+            <span class="flex items-center gap-1.5"><span class="cal-dot cal-dot-done"></span>POSTÉ</span>
+            <span class="opacity-70">· clique une case vide pour planifier</span>
           </div>
-          <div id="edito-cal-wrapper" class="fade-target grid grid-cols-7 gap-px mt-3 hud-cal-grid max-w-5xl">
+          <div id="edito-cal-wrapper" class="fade-target grid grid-cols-7 gap-px mt-3 hud-cal-grid max-w-6xl">
             <div class="hud-cal-head">Lun</div><div class="hud-cal-head">Mar</div><div class="hud-cal-head">Mer</div><div class="hud-cal-head">Jeu</div><div class="hud-cal-head">Ven</div><div class="hud-cal-head">Sam</div><div class="hud-cal-head">Dim</div>
             <div id="edito-cal-grid" class="contents"></div>
           </div>
@@ -507,17 +515,24 @@
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
             <div><label class="hud-label">Date de publication prévue</label><input required type="date" id="e-date" class="hud-input w-full" /></div>
             <div>
-              <label class="hud-label">Plateforme</label>
+              <label class="hud-label">Plateformes (une ou les deux)</label>
               <div class="grid grid-cols-2 gap-2">
-                <button type="button" id="e-btn-instagram" class="toggle-btn" data-active="true" onclick="setEditoPlatform('instagram')"><span class="toggle-inner">Instagram</span></button>
-                <button type="button" id="e-btn-linkedin" class="toggle-btn" data-active="false" onclick="setEditoPlatform('linkedin')"><span class="toggle-inner">LinkedIn</span></button>
+                <label class="pf-check"><input type="checkbox" id="e-pf-instagram" checked /> Instagram</label>
+                <label class="pf-check"><input type="checkbox" id="e-pf-linkedin" /> LinkedIn</label>
               </div>
             </div>
           </div>
           <div><label class="hud-label">Sujet</label><input required type="text" id="e-subject" placeholder="Ex : Teaser portes ouvertes" class="hud-input w-full" /></div>
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-5">
             <div><label class="hud-label">Format prévu</label><select id="e-format" class="hud-input w-full"></select></div>
             <div><label class="hud-label">Heure prévue (optionnel)</label><input type="time" id="e-time" class="hud-input w-full" /></div>
+            <div>
+              <label class="hud-label">Statut</label>
+              <select id="e-status" class="hud-input w-full">
+                <option value="todo">⏳ À faire</option>
+                <option value="scheduled">🕒 Programmé (posté auto à l'heure)</option>
+              </select>
+            </div>
           </div>
           <div><label class="hud-label">Description</label><textarea id="e-description" rows="3" placeholder="Angle, format, éléments visuels prévus…" class="hud-input w-full resize-none"></textarea></div>
           <div class="flex items-center gap-3">
@@ -555,6 +570,7 @@
       </div>
     </section>
 
+<!-- >>> FIN DU BLOC 3 — colle ensuite le bloc 4 juste en dessous <<< -->
     <!-- VIEW: AMBASSADEURS -->
     <section id="view-ambassadeurs" class="view" data-visible="false">
       <div class="w-full px-4 md:px-8 py-8 md:py-10">
@@ -570,25 +586,26 @@
           </form>
         </div>
 
-        <form id="ambassador-form" class="mt-6 hud-panel p-5 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 items-end">
+        <form id="ambassador-form" class="mt-6 hud-panel p-5 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-4 items-end">
           <div><label class="hud-label">Prénom</label><input required type="text" id="amb-firstname" class="hud-input w-full" /></div>
           <div><label class="hud-label">Nom</label><input required type="text" id="amb-lastname" class="hud-input w-full" /></div>
           <div><label class="hud-label">Email</label><input required type="email" id="amb-email" class="hud-input w-full" /></div>
           <div><label class="hud-label">Téléphone</label><input type="tel" id="amb-phone" class="hud-input w-full" /></div>
+          <div><label class="hud-label">Formation</label><input type="text" id="amb-formation" placeholder="Ex : BTS MCO" class="hud-input w-full" /></div>
           <button type="submit" class="hud-btn-primary py-2.5 shrink-0">+ RECRUTER</button>
         </form>
 
         <div class="flex items-center justify-between flex-wrap gap-3 mt-6">
           <div class="relative max-w-sm w-full sm:w-auto">
             <svg class="absolute left-3 top-1/2 -translate-y-1/2 opacity-30" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
-            <input type="text" id="amb-search" placeholder="Rechercher un nom, un prénom…" class="hud-input w-full sm:w-72 pl-9" oninput="renderAmbassadors()" />
+            <input type="text" id="amb-search" placeholder="Rechercher un nom, une formation…" class="hud-input w-full sm:w-72 pl-9" oninput="renderAmbassadors()" />
           </div>
           <div class="flex items-center gap-2 flex-wrap">
             <input type="file" id="amb-import-file" accept=".xlsx,.xls,.csv" class="hidden" onchange="importAmbassadors(event)" />
             <button onclick="document.getElementById('amb-import-file').click()" class="hud-btn-ghost px-4 py-2.5 text-xs">⬆ IMPORTER (EXCEL / CSV)</button>
             <button onclick="exportAmbassadorsExcel()" class="hud-btn-ghost px-4 py-2.5 text-xs">⬇ EXPORTER EN EXCEL</button>
           </div>
-          <p class="w-full text-[11px] opacity-40">Import : la 1re ligne doit contenir les en-têtes (Prénom, Nom, Email, Téléphone, Points). Les doublons (même email ou même nom) sont ignorés.</p>
+          <p class="w-full text-[11px] opacity-40">Import : la 1re ligne doit contenir les en-têtes (Prénom, Nom, Email, Téléphone, Formation, Points). Les doublons (même email ou même nom) sont ignorés.</p>
         </div>
 
         <div class="mt-4 max-w-xl">
@@ -607,7 +624,7 @@
     <section id="view-taches" class="view" data-visible="false">
       <div class="w-full px-4 md:px-8 py-8 md:py-10">
         <p class="font-heading font-bold text-2xl">Quêtes</p>
-        <p class="text-sm opacity-40 mt-1">Clique sur une étiquette pour l'ouvrir (description, deadline…). Glisse la poignée ⠿ pour la déplacer, ou utilise le menu ⋯ des colonnes pour les organiser.</p>
+        <p class="text-sm opacity-40 mt-1">Clique sur une étiquette pour l'ouvrir (description, deadline, lien…). Glisse la poignée ⠿ pour la déplacer, ou utilise le menu ⋯ des colonnes. Terminer une quête rapporte de l'XP et des pièces 🪙.</p>
 
         <form id="task-form" class="mt-6 hud-panel p-4 md:p-5 grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-[1fr_9rem_9rem_10rem_9rem_auto] gap-3 items-end">
           <div>
@@ -633,6 +650,10 @@
             <select id="t-recurrence" class="hud-input w-full">
               <option value="none">Aucune</option><option value="daily">Chaque jour</option><option value="weekly">Chaque semaine</option><option value="monthly">Chaque mois</option>
             </select>
+          </div>
+          <div class="sm:col-span-2 xl:col-span-full">
+            <label class="hud-label">Lien / fichier (optionnel — Drive, WeTransfer…)</label>
+            <input type="url" id="t-link" placeholder="https://…" class="hud-input w-full" />
           </div>
           <button type="submit" class="hud-btn-primary px-5 py-2.5 shrink-0">LANCER LA QUÊTE</button>
         </form>
@@ -669,6 +690,9 @@
           <button type="button" onclick="clearTaskSelection()" class="hud-btn-ghost px-3 py-2 text-xs">Désélectionner</button>
         </div>
 
+        <!-- Ligne calendrier édito : à prévoir / programmés / postés -->
+        <div id="edito-strip" class="mt-6 grid grid-cols-1 md:grid-cols-3 gap-3"></div>
+
         <div id="kanban-board" class="kanban-board mt-6"></div>
       </div>
     </section>
@@ -694,7 +718,7 @@
     <section id="view-equipe" class="view" data-visible="false">
       <div class="w-full px-4 md:px-8 py-8 md:py-10 max-w-5xl">
         <p class="font-heading font-bold text-2xl">Équipe &amp; succès</p>
-        <p class="text-sm opacity-40 mt-1">Le classement d'XP de la guilde et tes succès débloqués.</p>
+        <p class="text-sm opacity-40 mt-1">Le classement d'XP de la guilde et tes succès débloqués. Clique sur un joueur pour voir son profil.</p>
 
         <div class="hud-panel mt-6 overflow-x-auto">
           <table class="hud-table w-full text-sm min-w-[520px]">
@@ -708,6 +732,7 @@
       </div>
     </section>
 
+<!-- >>> FIN DU BLOC 4 — colle ensuite le bloc 5 juste en dessous <<< -->
     <!-- VIEW: MÉDIAS & VEILLE -->
     <section id="view-medias" class="view" data-visible="false">
       <div class="w-full px-4 md:px-8 py-8 md:py-10">
@@ -796,6 +821,26 @@
       </div>
     </section>
 
+<!-- >>> FIN DU BLOC 5 — colle ensuite le bloc 6 (dernier) juste en dessous <<< -->
+    <!-- VIEW: PROFIL (soi-même ou un coéquipier) -->
+    <section id="view-profil" class="view" data-visible="false"><div id="profil-box" class="w-full px-4 md:px-8 py-8 md:py-10 max-w-5xl"></div></section>
+
+    <!-- VIEW: BOUTIQUE -->
+    <section id="view-boutique" class="view" data-visible="false"><div id="shop-box" class="w-full px-4 md:px-8 py-8 md:py-10 max-w-5xl"></div></section>
+
+    <!-- VIEW: CHAT D'ÉQUIPE -->
+    <section id="view-chat" class="view" data-visible="false">
+      <div class="w-full px-4 md:px-8 py-8 md:py-10 max-w-3xl">
+        <p class="font-heading font-bold text-2xl">Chat d'équipe</p>
+        <p class="text-sm opacity-40 mt-1">Les 100 derniers messages, en direct.</p>
+        <div id="chat-list" class="hud-panel mt-4 p-3 h-[58vh] overflow-y-auto flex flex-col gap-3"></div>
+        <form id="chat-form" class="mt-3 flex gap-2">
+          <input id="chat-input" maxlength="300" autocomplete="off" placeholder="Écris un message…" class="hud-input flex-1" />
+          <button type="submit" class="hud-btn-primary px-5">ENVOYER</button>
+        </form>
+      </div>
+    </section>
+
   </main>
 
   <!-- BOTTOM NAV -->
@@ -820,6 +865,9 @@
   <div id="more-sheet-backdrop" class="hidden md:hidden fixed inset-0 bg-black/60 z-50" onclick="toggleMoreSheet()"></div>
   <div id="more-sheet" class="hidden md:hidden fixed bottom-0 inset-x-0 z-50 hud-sheet rounded-t-2xl p-5 max-h-[85vh] overflow-y-auto pb-[calc(env(safe-area-inset-bottom)+1.25rem)]">
     <div class="w-10 h-1 bg-white/15 rounded-full mx-auto mb-5"></div>
+    <button class="w-full flex items-center gap-3 px-3 py-3 rounded-xl hover:bg-white/5" onclick="openProfile(); toggleMoreSheet()"><span class="text-sm font-semibold">🧙 Mon profil</span></button>
+    <button class="w-full flex items-center gap-3 px-3 py-3 rounded-xl hover:bg-white/5" onclick="switchTab('boutique'); toggleMoreSheet()"><span class="text-sm font-semibold">🛒 Boutique</span></button>
+    <button class="w-full flex items-center gap-3 px-3 py-3 rounded-xl hover:bg-white/5" onclick="switchTab('chat'); toggleMoreSheet()"><span class="text-sm font-semibold">💬 Chat d'équipe</span></button>
     <button class="w-full flex items-center gap-3 px-3 py-3 rounded-xl hover:bg-white/5" onclick="switchTab('calendrier'); toggleMoreSheet()">
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 3v3M16 3v3"/></svg><span class="text-sm font-semibold">Calendrier suivi</span>
     </button>
@@ -868,6 +916,10 @@
       <div>
         <label class="hud-label">Description</label>
         <textarea id="tm-desc" rows="5" placeholder="Détails, liens, consignes…" class="hud-input w-full resize-y"></textarea>
+      </div>
+      <div>
+        <label class="hud-label">Lien / fichier (optionnel)</label>
+        <input type="url" id="tm-link" placeholder="https://…" class="hud-input w-full" />
       </div>
       <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <div>
